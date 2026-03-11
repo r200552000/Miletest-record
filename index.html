@@ -581,7 +581,7 @@
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content p-3 border-0" style="background: #f8fafc;">
         <div class="tdc-flex tdc-justify-between tdc-align-center tdc-mb-3">
-          <h5 class="fw-bold tdc-m-0 tdc-flex tdc-align-center" id="ai-modal-title" style="color: #6d28d9;"><svg class="me-2" style="width:20px;height:20px;"><use href="#icon-sparkle"/></svg>系統診斷回報</h5>
+          <h5 class="fw-bold tdc-m-0 tdc-flex tdc-align-center" id="ai-modal-title" style="color: #6d28d9;"><svg class="me-2" style="width:20px;height:20px;"><use href="#icon-sparkle"/></svg>系統診 হত্যার回報</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body p-0" id="ai-report-content">
@@ -639,8 +639,12 @@
     let plannerSelectedAssets = new Set(); 
 
     // --- 動態規章神經網路 (第一段) ---
+    // [維護者註解] RULES_DB 負責承接遠端抓取回來的 rules.json。
+    // 在啟動時會先以 DEFAULT_RULES 填充，成功 fetch 後才更新。
     let RULES_DB = null;
     const PRIMARY_RULES_URL = "https://gist.githubusercontent.com/r200552000/bdced9d179ec50a9dde110732601f310/raw/rules.json";
+
+    // [維護者註解] 這是最底層的安全網，當網路斷線且無快取時，系統會依賴此物件來維持基本運作，避免白屏。
     const DEFAULT_RULES = {
         version: "v14.9.0",
         last_updated: "2026-03-11",
@@ -660,6 +664,7 @@
         ]
     };
 
+    // [維護者註解] 控制各卡片記帳後，一鍵進倉時要歸入的資產池名稱與轉點比例。
     const DEFAULT_AUTO_ASSETS = {
         'hsbc_live': { target: '匯豐Live+積分', type: 'transfer', ratio: 2, unitPoints: 1, unitMiles: 2 },
         'hsbc_inf': { target: '匯豐 旅人積分', type: 'transfer', ratio: 1, unitPoints: 1, unitMiles: 1 },
@@ -668,6 +673,7 @@
         'taishin_cx': { target: '國泰航空', type: 'airline', ratio: 1, unitPoints: 1, unitMiles: 1 }
     };
 
+    // [維護者註解] 控制倉庫卡片上顯示的「支援 X 家夥伴」與兌換比例文字，後續可從 rules.json 擴充。
     const DEFAULT_TRANSFER_PARTNERS = {
         '匯豐 旅人積分': {
             supported_partners: [
@@ -687,6 +693,7 @@
         }
     };
 
+    // [維護者註解] (Step 1 外掛化) 備援用的情境觸發關鍵字。主程式將依賴 getKeywordsConfig() 來獲取。
     const DEFAULT_KEYWORDS = {
         live: {
             dining: ['餐廳','吃飯','外送','ubereats','foodpanda','燒肉','火鍋','麻辣','壽司','日式','居酒屋','餐酒館','酒吧','咖啡','甜點','牛排','鐵板燒','拉麵','茶六','屋馬','乾杯','buffet','王品','享鴨','夏慕尼','西堤','石二鍋','陶板屋','青花驕','饗賓','饗饗','開飯','瓦城','鼎泰豐','海底撈','金大鋤','築間','壽司郎','藏壽司','爭鮮','吉兆','明壽司','金色三麥','春大直','貳樓','涓豆腐','hooters','勝田','麥當勞','星巴克','必勝客','達美樂','富王','文公館','教父牛排','山海樓','鹽之華','牡丹','logy','inita','ikea','莫凡彼','貴族世家'],
@@ -697,6 +704,7 @@
         eu_uk: ['歐洲', '歐盟', '英國', '法國', '德國', '義大利', '西班牙', 'eur', 'gbp', 'london', 'paris']
     };
 
+    // [維護者註解] (Step 1 外掛化) 備援用的各行不回饋黑名單。主程式將依賴 getBlocklistsConfig() 來獲取。
     const DEFAULT_BLOCKLISTS = {
         ctbc: ['全聯','px','全支付','7-11','711','全家','萊爾富','ok超商','繳費','etoro','wise','revolut','麥當勞','肯德基','漢堡王','摩斯'],
         hsbc_base: ['全聯','px','7-11','711','全家','萊爾富','ok超商','繳費','判決書','醫療','掛號','年費','手續費','賭博','麥當勞','肯德基'],
@@ -704,10 +712,12 @@
         taishin: ['分期','全聯','px','7-11','711','全家','萊爾富','ok超商','繳費','國民年金','etag','三商美邦','麥當勞','肯德基']
     };
 
+    // [維護者註解] (Step 1 外掛化) 備援用的特定規則判定標籤 (如華航/國泰官網判定)。主程式將依賴 getRuleFlagsConfig() 來獲取。
     const DEFAULT_RULE_FLAGS = {
         strict_online: ['flight_ci','flight_cx','flight_other']
     };
 
+    // [維護者註解] 嚴格檢驗遠端抓回來的 JSON 格式。任何子欄位若非預期物件/陣列，將回傳 false 並觸發 Fallback 降級。
     function validateRulesPayload(data) {
         if (typeof data !== 'object' || data === null) return false;
         if (!Array.isArray(data.ui_categories)) return false;
@@ -724,6 +734,8 @@
         return true;
     }
 
+    // [維護者註解] 深層補洞機制 (Deep Merge) - 避免白屏：
+    // 若遠端 JSON 存在但漏填了某個陣列 (如缺了 asia_7)，系統會自動從 DEFAULT_KEYWORDS 填補該欄位。
     function getKeywordsConfig() {
         const remote = (RULES_DB && RULES_DB.keywords) ? RULES_DB.keywords : {};
         const liveRemote = remote.live || {};
@@ -738,6 +750,7 @@
         };
     }
 
+    // [維護者註解] 深層補洞機制 - 若遠端未提供特定銀行黑名單，退回預設值，保護 calc 內的 .some() 不會因 undefined 報錯。
     function getBlocklistsConfig() {
         const remote = (RULES_DB && RULES_DB.blocklists) ? RULES_DB.blocklists : {};
         return {
@@ -748,6 +761,7 @@
         };
     }
 
+    // [維護者註解] 深層補洞機制 - 保證 strict_online 等標籤陣列的安全性。
     function getRuleFlagsConfig() {
         const remote = (RULES_DB && RULES_DB.rule_flags) ? RULES_DB.rule_flags : {};
         return {
@@ -755,6 +769,7 @@
         };
     }
 
+    // [維護者註解] 讀取本地 LocalStorage 內上次成功抓取的快取規則。
     function loadRulesCache() {
         try {
             const raw = localStorage.getItem('RULES_CACHE_V1');
@@ -783,6 +798,8 @@
         localStorage.removeItem('RULES_CACHE_META_V1');
     }
 
+    // [維護者註解] 遠端抓取生命週期：
+    // 優先抓取 Github Gist -> 若失敗或格式錯誤 -> 退回讀取 Cache -> 若無 Cache -> 降級使用 DEFAULT_RULES。
     async function fetchRules() {
         try {
             const res = await fetch(PRIMARY_RULES_URL);
@@ -873,7 +890,6 @@
     function isFlightCategory(ctx){
         return ctx.group === 'flight' || ctx.cat.startsWith('flight');
     }
-
     // --- 內建防禦、卡片定義與轉點字典 ---
     const BUILTIN_DEFS = [
       { id: 'hsbc_live', name: '匯豐 Live+', default: true },
@@ -1172,6 +1188,7 @@
             name: '中信 華航璀璨', 
             ai_meta: { bestRate: 6.6, bestScenario: "生日海外實體", baseRate: 20, isUnlimitedLike: false },
             calc: (ctx) => { 
+                // [維護者註解] (Step 1 外掛化) 從遠端 Getter 獲取該行黑名單與線上刷卡判定旗標，取代舊有常數
                 const blk = getBlocklistsConfig();
                 const flags = getRuleFlagsConfig();
                 if (blk.ctbc.some(w => ctx.kwKey.includes(w))) return { miles:0, note:'<span class="text-danger">🚫 非回饋項目</span>', consumedQuota:0 }; 
@@ -1206,6 +1223,7 @@
             ai_meta: { bestRate: 34, bestScenario: "一般消費", baseRate: 34, isUnlimitedLike: false },
             calc: (ctx) => { 
                 if (ctx.isEUR) return { miles:0, note: '<span class="text-danger">🚫 歐盟/英國實體店不回饋</span>', consumedQuota:0 }; 
+                // [維護者註解] (Step 1 外掛化) 從遠端獲取 Live+ 專屬黑名單與亞洲七國清單
                 const blk = getBlocklistsConfig();
                 const kw = getKeywordsConfig();
                 if (blk.hsbc_live.some(w => ctx.kwKey.includes(w))) return { miles:0, note: '<span class="text-danger">🚫 非回饋項目</span>', consumedQuota:0 }; 
@@ -1274,6 +1292,7 @@
             name: '台新 國泰世界', 
             ai_meta: { bestRate: 5, bestScenario: "越飛有哩/國泰官網", baseRate: 22, isUnlimitedLike: false },
             calc: (ctx) => { 
+                // [維護者註解] (Step 1 外掛化) 獲取台新黑名單
                 const blk = getBlocklistsConfig();
                 if (blk.taishin.some(w => ctx.kwKey.includes(w))) return { miles:0, note:'<span class="text-danger">🚫 非回饋項目</span>', consumedQuota:0 }; 
                 let baseDiv = ctx.isForeign ? 15 : 22; 
@@ -1312,6 +1331,7 @@
             name: '匯豐 旅人無限', 
             ai_meta: { bestRate: 10, bestScenario: "海外/指定機票", baseRate: 18, isUnlimitedLike: true },
             calc: (ctx) => { 
+                // [維護者註解] (Step 1 外掛化) 獲取匯豐一般黑名單
                 const blk = getBlocklistsConfig();
                 if (['麥當勞', ...blk.hsbc_base].some(w => ctx.kwKey.includes(w))) return { miles:0, note:'🚫 非回饋', consumedQuota:0 }; 
                 let div = (ctx.cat.startsWith('flight') || ctx.isForeign) ? 10 : 18; 
@@ -1322,6 +1342,7 @@
             name: '中信 華航鼎尊', 
             ai_meta: { bestRate: 6, bestScenario: "生日海外實體", baseRate: 18, isUnlimitedLike: false },
             calc: (ctx) => { 
+                // [維護者註解] (Step 1 外掛化) 獲取中信黑名單與線上判定旗標
                 const blk = getBlocklistsConfig();
                 const flags = getRuleFlagsConfig();
                 if (blk.ctbc.some(w => ctx.kwKey.includes(w))) return { miles:0, note:'🚫 非回饋', consumedQuota:0 }; 
@@ -1392,6 +1413,8 @@
         const kwKey = (document.getElementById('keyword-input').value || '').trim().toLowerCase();
         const isForeign = (currType === 'FOREIGN');
         const payMethod = document.getElementById('payment').value;
+        
+        // [維護者註解] (Step 1 外掛化) 統一從遠端設定讀取全域關鍵字，判斷歐盟/英國實體防護網與 Live+ 精選。
         const kwConfig = getKeywordsConfig();
         const isEUPhysical = isForeign && payMethod !== 'online' && kwConfig.eu_uk.some(w => kwKey.includes(w));
 
@@ -1439,7 +1462,6 @@
             }
             currentResults.push({ id: c.id, name: escapeHTML(c.name), miles: miles, note: note, consumedQuota: consumedQuota, isWarning: isWarning, twdSpend: ctx.twdSpend, twdBase: ctx.twdBase });
         });
-        
         if (amt < 0) currentResults.sort((a,b) => a.miles - b.miles);
         else currentResults.sort((a,b) => b.miles - a.miles);
         
@@ -1667,7 +1689,8 @@
         const db = loadDB(); const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
         const data = db.records[monthKey]; if(!data) return;
         
-        const autoAssetsConfig = getAutoAssetsConfig(); // 動態取得進倉設定 (優先遠端)
+        // [維護者註解] (Step 1 外掛化) 呼叫 Getter 動態取得進倉分流設定 (支援遠端更新與匯豐新舊制)
+        const autoAssetsConfig = getAutoAssetsConfig(); 
         
         for(let k in data) {
             const r = data[k]; 
@@ -1698,6 +1721,7 @@
         document.getElementById('edit-limit-val').value = '';
         new bootstrap.Modal(document.getElementById('editLimitModal')).show();
     }
+
     // ==========================================
     // 6. 倉庫管理 2.0 (三位一體)
     // ==========================================
@@ -1720,6 +1744,7 @@
                 let bonusMiles = (bReq > 0) ? Math.trunc(cur / bReq) * bGive : 0;
                 miles = baseMiles + bonusMiles;
 
+                // [維護者註解] (Step 1 外掛化) 呼叫 Getter 動態顯示各轉點池支援的夥伴數量與兌換比例。
                 let partnerInfo = '';
                 const tConf = getTransferPartnersConfig()[item.name];
                 if (tConf) {
@@ -2312,7 +2337,9 @@ ${mode === 'global' ? globalSchema : specificSchema}`;
             if (safeType !== 'raw') plannerSelectedAssets.add(idx);
         });
 
-        // 1. 快速載入快取或 Fallback，讓畫面立即渲染
+        // [維護者註解] window.onload 初始化流程：
+        // 為了避免遠端抓取延遲導致畫面卡頓，採用「兩階段載入」：
+        // 1. 快速載入快取或 Fallback，讓畫面立即渲染。
         const cachedData = loadRulesCache();
         const ind = document.getElementById('sync-indicator');
         const adapterBadge = document.getElementById('hsbc-adapter-status');
@@ -2338,10 +2365,10 @@ ${mode === 'global' ? globalSchema : specificSchema}`;
         runPlannerCalc();
         
         // 2. 背景非同步抓取遠端最新規則 (不使用 await 阻塞後續畫面與操作)
+        // 抓取完成後會靜默更新 LocalStorage 並反映在下次操作中。
         triggerSync();
     };
 
   </script>
 </body>
 </html>
-
