@@ -891,3 +891,811 @@
     // ==========================================
     // 1. 系統資料庫與基礎操作 (強型別防禦版)
     // ==========================================
+    function loadDB() {
+        const raw = localStorage.getItem(DB_KEY);
+        const defaultDB = { settings: { enabledBuiltins: ['hsbc_live','taishin_cx','ctbc_ci','hsbc_inf','ctbc_ci_inf'], billingDays: { ...DEFAULT_BILLING }, hsbc_autopay: true }, customCards: [], records: {}, limits: {}, warehouse: [] };
+        if(!raw) return defaultDB;
+        try {
+            const db = JSON.parse(raw);
+            if(!db.records || typeof db.records !== 'object' || Array.isArray(db.records)) db.records = {};
+            if(!db.limits || typeof db.limits !== 'object' || Array.isArray(db.limits)) db.limits = {};
+            if(!Array.isArray(db.warehouse)) db.warehouse = [];
+            if(!Array.isArray(db.customCards)) db.customCards = [];
+            
+            if(!db.settings || typeof db.settings !== 'object' || Array.isArray(db.settings)) {
+                db.settings = defaultDB.settings;
+            } else {
+                if (!Array.isArray(db.settings.enabledBuiltins)) db.settings.enabledBuiltins = [...defaultDB.settings.enabledBuiltins];
+                if (typeof db.settings.hsbc_autopay !== 'boolean') db.settings.hsbc_autopay = true;
+                
+                if (typeof db.settings.billingDays === 'object' && db.settings.billingDays !== null && !Array.isArray(db.settings.billingDays)) {
+                    db.settings.billingDays = { ...defaultDB.settings.billingDays, ...db.settings.billingDays };
+                } else {
+                    db.settings.billingDays = { ...DEFAULT_BILLING };
+                }
+            }
+            return db;
+        } catch (e) {
+            console.error("資料庫解析失敗，已重置為預設狀態", e);
+            return defaultDB;
+        }
+    }
+    function saveDB(data) { localStorage.setItem(DB_KEY, JSON.stringify(data)); }
+
+    function escapeHTML(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+    
+    const formatMD = (str) => {
+        let safeStr = escapeHTML(str);
+        return safeStr.replace(/\*\*(.*?)\*\*/g, '<strong class="text-primary-dark">$1</strong>').replace(/\n/g, '<br>');
+    };
+
+    function showCustomAlert(msg) { document.getElementById('alert-msg').innerText = msg; new bootstrap.Modal(document.getElementById('customAlertModal')).show(); }
+
+    function switchPage(p, btn) {
+        document.querySelectorAll('.page-section').forEach(e => e.style.display='none');
+        document.getElementById(`page-${p}`).style.display='block';
+        document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active')); btn.classList.add('active');
+        if(p==='warehouse') switchWarehouseTab('planner');
+        if(p==='status') renderStatus();
+        if(p==='list') renderList(); 
+        window.scrollTo(0,0);
+    }
+    
+    function switchWarehouseTab(view) {
+        document.getElementById('warehouse-view-manage').style.display = (view === 'manage' ? 'block' : 'none');
+        document.getElementById('warehouse-view-planner').style.display = (view === 'planner' ? 'block' : 'none');
+        const btnManage = document.getElementById('tab-btn-manage'); const btnPlanner = document.getElementById('tab-btn-planner');
+        if (view === 'manage') {
+            btnManage.style.background = '#ffffff'; btnManage.style.color = 'var(--primary-dark)'; btnManage.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+            btnPlanner.style.background = 'transparent'; btnPlanner.style.color = 'inherit'; btnPlanner.style.boxShadow = 'none';
+            if (typeof renderWarehouse === "function") renderWarehouse();
+        } else {
+            btnPlanner.style.background = '#ffffff'; btnPlanner.style.color = 'var(--primary-dark)'; btnPlanner.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+            btnManage.style.background = 'transparent'; btnManage.style.color = 'inherit'; btnManage.style.boxShadow = 'none';
+        }
+    }
+
+    function clearInput(id) { const el = document.getElementById(id); el.value = ''; el.focus(); checkInputStyle(el); if(id === 'fx-rate-input') updateFxFeedback(); }
+    function toggleNegative(id) { 
+        const el = document.getElementById(id); let val = parseFloat(el.value);
+        if(isNaN(val)) val = 0; el.value = val === 0 ? '-' : (val * -1); checkInputStyle(el);
+    }
+    function checkInputStyle(el) {
+        const val = parseFloat(el.value);
+        if(val < 0) { el.classList.add('input-negative'); } else { el.classList.remove('input-negative'); }
+    }
+    
+    function toggleFxInput(val) { 
+        document.getElementById('fx-input-group').style.display = (val === 'FOREIGN') ? 'block' : 'none'; 
+        document.getElementById('amount-label').innerHTML = (val === 'FOREIGN') ? '🌎 外幣消費金額' : '🇹🇼 消費金額 (TWD)';
+    }
+    
+    function updateFxFeedback() {
+        const inputVal = document.getElementById('fx-rate-input').value;
+        const feedbackBlock = document.getElementById('fx-feedback');
+        const realRateSpan = document.getElementById('fx-real-rate');
+        
+        if (inputVal && !isNaN(inputVal) && parseFloat(inputVal) > 0) {
+            const realRate = parseFloat(inputVal) * 1.015;
+            realRateSpan.innerText = realRate.toFixed(4);
+            feedbackBlock.style.display = 'block';
+        } else {
+            feedbackBlock.style.display = 'none';
+        }
+    }
+
+    function updateKeywordPlaceholder() {
+        const cat = document.getElementById('category').value;
+        const input = document.getElementById('keyword-input');
+        if(cat === 'flight_ci' || cat === 'flight_cx' || cat === 'flight_other') input.placeholder = '可留空或輸入航線 (如: TPE-NRT)';
+        else input.placeholder = '輸入店家關鍵字 (如: 麥當勞, Agoda, JPY, 日本)...';
+    }
+    function goToSettingsFromAI() { bootstrap.Modal.getInstance(document.getElementById('aiIntroModal')).hide(); setTimeout(openSettings, 400); }
+
+    async function triggerSync() {
+        const ind = document.getElementById('sync-indicator');
+        const adapterBadge = document.getElementById('hsbc-adapter-status');
+        
+        // 狀態：同步中
+        if (ind) ind.className = 'sync-dot sync-yellow me-2';
+        if (adapterBadge) {
+            adapterBadge.innerText = 'Rules: Syncing...';
+            adapterBadge.className = 'badge bg-warning text-dark ms-2';
+        }
+        
+        const status = await fetchRules();
+        renderCategorySelect();
+        
+        if (status.mode === "remote") {
+            // 狀態：遠端最新
+            if (ind) ind.className = 'sync-dot sync-green me-2';
+            if (adapterBadge) {
+                adapterBadge.innerText = 'Rules: Active';
+                adapterBadge.className = 'badge bg-success text-white ms-2';
+            }
+        } else if (status.mode === "cache") {
+            // 狀態：使用離線快取
+            if (ind) ind.className = 'sync-dot sync-green me-2'; 
+            if (adapterBadge) {
+                adapterBadge.innerText = 'Rules: Cached';
+                adapterBadge.className = 'badge bg-primary text-white ms-2';
+            }
+        } else {
+            // 狀態：降級備援
+            if (ind) ind.className = 'sync-dot sync-red me-2';
+            if (adapterBadge) {
+                adapterBadge.innerText = 'Rules: Fallback';
+                adapterBadge.className = 'badge bg-secondary text-white ms-2';
+            }
+        }
+    }
+
+    function exportDataMagic() {
+        const db = localStorage.getItem(DB_KEY) || '{}'; const b64 = btoa(unescape(encodeURIComponent(db)));
+        if (navigator.clipboard) { navigator.clipboard.writeText(b64).then(() => showCustomAlert('✅ 搬家代碼已成功複製！請妥善保存。')); } 
+        else { prompt('請全選並複製以下代碼：', b64); }
+    }
+    function triggerRestoreFlow() {
+        bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
+        setTimeout(() => { document.body.classList.add('confirm-modal-open'); new bootstrap.Modal(document.getElementById('customConfirmModal')).show(); }, 400);
+    }
+    function hideConfirmModal() {
+        bootstrap.Modal.getInstance(document.getElementById('customConfirmModal')).hide();
+        document.body.classList.remove('confirm-modal-open');
+    }
+    document.getElementById('confirm-restore-btn').addEventListener('click', () => {
+        hideConfirmModal();
+        setTimeout(() => {
+            const code = prompt("請貼上您的還原代碼 (Base64)：");
+            if(code) {
+                try {
+                    const decoded = decodeURIComponent(escape(atob(code.trim()))); JSON.parse(decoded); localStorage.setItem(DB_KEY, decoded);
+                    alert("🎉 資料還原成功！系統即將重新整理。"); location.reload();
+                } catch(e) { showCustomAlert("❌ 無效的還原代碼！請確認您有完整複製。"); }
+            }
+        }, 400);
+    });
+
+    function renderSettingsCards() {
+        const db = loadDB();
+        
+        const builtinCon = document.getElementById('builtin-cards-list'); if(!builtinCon) return;
+        builtinCon.innerHTML = '';
+        BUILTIN_DEFS.forEach(def => {
+            const isChecked = (db.settings.enabledBuiltins || []).includes(def.id) ? 'checked' : '';
+            builtinCon.innerHTML += `<label class="switch-group tdc-mb-2"><span class="switch-label">${def.name}</span><input class="form-check-input" type="checkbox" onchange="toggleBuiltin('${def.id}', this.checked)" ${isChecked}></label>`;
+        });
+
+        const customCon = document.getElementById('custom-cards-list'); if(!customCon) return;
+        customCon.innerHTML = '';
+        (db.customCards || []).forEach((c, i) => {
+            if (!c || typeof c !== 'object') return;
+            let limitStr = (c.limitAmt && c.limitAmt > 0) ? `上限$${c.limitAmt.toLocaleString()}` : '無上限';
+            let cycleStr = c.isAnnual ? '年度結算' : `每月${c.billingDay||1}日結`;
+            customCon.innerHTML += `<div class="custom-card-item"><div class="fw-bold text-dark">${escapeHTML(c.name)} <span class="small text-muted ms-2">國$${c.domRate}/外$${c.forRate} (${limitStr}/${cycleStr})</span></div><button class="btn btn-sm btn-outline-danger border-0 p-1" onclick="delCustomCard(${i})"><svg class="lucide"><use href="#icon-trash"/></svg></button></div>`;
+        });
+
+        const bDayCon = document.getElementById('billing-days-container');
+        if(bDayCon) {
+            let bHtml = '';
+            BUILTIN_DEFS.forEach(def => {
+                if((db.settings.enabledBuiltins || []).includes(def.id)) {
+                    if(['taishin_cx', 'ctbc_ci', 'ctbc_ci_inf'].includes(def.id)) {
+                        bHtml += `<div class="tdc-flex tdc-justify-between tdc-align-center tdc-mb-2"><span class="small fw-bold text-dark">${def.name}</span><span class="badge bg-secondary">年度結算</span></div>`;
+                    } else {
+                        let currentDay = db.settings.billingDays[def.id] || db.settings.billingDays[def.id.split('_')[0]] || 1;
+                        bHtml += `<div class="tdc-flex tdc-justify-between tdc-align-center tdc-mb-2"><span class="small fw-bold text-dark">${def.name}</span><select class="form-select form-select-sm w-auto rounded-pill" style="border-width: 2px;" onchange="updateBillingDay('${def.id}', this.value)">${Array.from({length:31}, (_, i)=>`<option value="${i+1}" ${i+1===currentDay?'selected':''}>每月 ${i+1} 日</option>`).join('')}</select></div>`;
+                    }
+                }
+            });
+            (db.customCards || []).forEach(c => {
+                if (!c || typeof c !== 'object') return;
+                if(c.isAnnual) {
+                    bHtml += `<div class="tdc-flex tdc-justify-between tdc-align-center tdc-mb-2"><span class="small fw-bold text-dark">${escapeHTML(c.name)}</span><span class="badge bg-secondary">年度結算</span></div>`;
+                } else {
+                    let currentDay = c.billingDay || 1;
+                    bHtml += `<div class="tdc-flex tdc-justify-between tdc-align-center tdc-mb-2"><span class="small fw-bold text-dark">${escapeHTML(c.name)}</span><select class="form-select form-select-sm w-auto rounded-pill" style="border-width: 2px;" onchange="updateCustomBillingDay('${c.id}', this.value)">${Array.from({length:31}, (_, i)=>`<option value="${i+1}" ${i+1===currentDay?'selected':''}>每月 ${i+1} 日</option>`).join('')}</select></div>`;
+                }
+            });
+            bDayCon.innerHTML = bHtml || '<div class="text-muted small">尚未啟用任何卡片</div>';
+        }
+    }
+
+    function toggleBuiltin(id, isEnabled) { const db = loadDB(); if(isEnabled && !db.settings.enabledBuiltins.includes(id)) db.settings.enabledBuiltins.push(id); else if(!isEnabled) db.settings.enabledBuiltins = db.settings.enabledBuiltins.filter(x => x !== id); saveDB(db); renderSettingsCards(); }
+    function updateBillingDay(id, day) { const db = loadDB(); if(!db.settings.billingDays) db.settings.billingDays={}; db.settings.billingDays[id] = parseInt(day); saveDB(db); }
+    function updateCustomBillingDay(id, day) { const db = loadDB(); const c = db.customCards.find(x=>x&&x.id===id); if(c) c.billingDay = parseInt(day); saveDB(db); }
+    
+    function addCustomCard() { 
+        const name = prompt('自訂卡片名稱：'); if(!name) return; 
+        const dom = parseFloat(prompt('國內 $X/哩：', '10')); 
+        const fgn = parseFloat(prompt('海外 $X/哩：', '10')); 
+        if(isNaN(dom) || dom <= 0 || isNaN(fgn) || fgn <= 0) return alert('❌ 錯誤：兌換率必須是大於 0 的有效數字！');
+        let limitAmt = parseFloat(prompt('請輸入此卡的回饋/刷卡上限金額 (TWD)：\n(若無上限請輸入 0)', '0'));
+        if(isNaN(limitAmt) || limitAmt < 0) limitAmt = 0;
+
+        const isAnnual = confirm('【上限類型確認】\n這張自訂卡片是「年度回饋上限」嗎？\n\n• 按「確定」：設為年度歸零\n• 按「取消」：設為每月結帳日歸零');
+        let bDay = 1;
+        if (!isAnnual) {
+            bDay = parseInt(prompt('請輸入卡片結帳日 (1~31)：', '1'));
+            if(isNaN(bDay) || bDay < 1 || bDay > 31) return alert('輸入無效，請確認數字格式及範圍 (1-31)'); 
+        }
+
+        const db = loadDB(); 
+        db.customCards.push({ id: `custom_${Date.now()}`, name, domRate: dom, forRate: fgn, billingDay: bDay, isAnnual: isAnnual, limitAmt: limitAmt }); 
+        saveDB(db); renderSettingsCards(); 
+    }
+    
+    function delCustomCard(idx) { if(confirm('確定刪除這張自訂卡片？')) { const db = loadDB(); db.customCards.splice(idx, 1); saveDB(db); renderSettingsCards(); } }
+    function openSettings() { document.getElementById('gemini-key').value = localStorage.getItem('GEMINI_API_KEY') || ''; document.getElementById('github-token').value = localStorage.getItem('GITHUB_GIST_TOKEN') || ''; document.getElementById('setting-hsbc-autopay').checked = loadDB().settings.hsbc_autopay; renderSettingsCards(); new bootstrap.Modal(document.getElementById('settingsModal')).show(); }
+    function saveSettings() { const key = document.getElementById('gemini-key').value.trim(); const git = document.getElementById('github-token').value.trim(); if(key) localStorage.setItem('GEMINI_API_KEY', key); else localStorage.removeItem('GEMINI_API_KEY'); if(git) localStorage.setItem('GITHUB_GIST_TOKEN', git); else localStorage.removeItem('GITHUB_GIST_TOKEN'); const db = loadDB(); db.settings.hsbc_autopay = document.getElementById('setting-hsbc-autopay').checked; saveDB(db); bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide(); showCustomAlert("✅ 系統設定已更新"); triggerSync(); }
+    function openGuide() { new bootstrap.Modal(document.getElementById('guideModal')).show(); }
+    // ==========================================
+    // 2. 上限管家與防護系統
+    // ==========================================
+    function getLimitKey(db, id, dateObj) {
+        if(['taishin_cx', 'ctbc_ci', 'ctbc_ci_inf'].includes(id)) return `${dateObj.getFullYear()}-${id}`;
+        if(id.startsWith('custom_')) {
+            const c = db.customCards.find(x => x && typeof x === 'object' && x.id === id);
+            if(c && c.isAnnual) return `${dateObj.getFullYear()}-${id}`;
+            let day = (c && c.billingDay) ? c.billingDay : 1;
+            const offset = dateObj.getDate() > day ? 1 : 0;
+            const d = new Date(dateObj.getFullYear(), dateObj.getMonth() + offset, 1);
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${id}`;
+        }
+        let day = db.settings?.billingDays?.[id] || db.settings?.billingDays?.[id.split('_')[0]] || 1;
+        const offset = dateObj.getDate() > day ? 1 : 0;
+        const d = new Date(dateObj.getFullYear(), dateObj.getMonth() + offset, 1);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${id}`;
+    }
+    
+    function getLimitVal(id) { 
+        if(id==='hsbc_live') return 29600; 
+        if(id==='hsbc_inf') return 999999999; 
+        if(id==='ctbc_ci_inf') return 600000; 
+        if(id==='taishin_cx') return 1000000; 
+        if(id==='ctbc_ci') return 1440000; 
+        return 999999999; 
+    }
+    // ==========================================
+    // 3. 核心運算引擎 (含 AI 費率對齊)
+    // ==========================================
+    const CARD_RULES = {
+        'ctbc_ci_inf': { 
+            name: '中信 華航璀璨', 
+            ai_meta: { bestRate: 6.6, bestScenario: "生日海外實體", baseRate: 20, isUnlimitedLike: false },
+            calc: (ctx) => { 
+                const blk = getBlocklistsConfig();
+                const flags = getRuleFlagsConfig();
+                if (blk.ctbc.some(w => ctx.kwKey.includes(w))) return { miles:0, note:'<span class="text-danger">🚫 非回饋項目</span>', consumedQuota:0 }; 
+                const isOnline = flags.strict_online.includes(ctx.cat) || ctx.pay === 'online'; 
+                const isTruePhysical = !isOnline && (ctx.pay === 'physical' || ctx.pay === 'apple_pay'); 
+                let div = 20, isBonus = false; 
+                
+                if (ctx.isBirthday && ctx.isForeign && isTruePhysical) { div = 6.6; isBonus = true; } 
+                else if (ctx.cat.startsWith('flight') || ctx.isForeign || ['agoda','booking','trip'].some(w=>ctx.kwKey.includes(w))) { div = 10; isBonus = true; } 
+
+                if (isBonus) {
+                    let limit = getLimitVal('ctbc_ci_inf');
+                    let used = ctx.db.limits[getLimitKey(ctx.db, 'ctbc_ci_inf', new Date())]?.spend || 0;
+                    let remaining = Math.max(0, limit - used);
+                    
+                    if (ctx.twdBase <= remaining) {
+                        return { miles: Math.trunc(ctx.twdBase / div), note: (div===6.6 ? '🎂 生日海外實體 $6.6' : '✈️ 指定/海外 $10'), consumedQuota: ctx.twdBase };
+                    } else {
+                        let bonusMiles = Math.trunc(remaining / div);
+                        let baseMiles = Math.trunc((ctx.twdBase - remaining) / 20);
+                        let note = remaining === 0 
+                            ? `<span class="text-danger fw-bold d-block mt-1">⚠️ 年度額度已滿，降為一般回饋 ($20/哩)</span>` 
+                            : `<span class="text-danger fw-bold d-block mt-1">⚠️ 單筆爆額度上限，超額部分享一般回饋</span>`;
+                        return { miles: bonusMiles + baseMiles, note: (div===6.6 ? '🎂 生日海外實體 $6.6' : '✈️ 指定/海外 $10') + note, consumedQuota: remaining, isWarning: true };
+                    }
+                }
+                return { miles: Math.trunc(ctx.twdBase / 20), note: '一般消費 $20', consumedQuota: 0 }; 
+            } 
+        },
+        'hsbc_live': { 
+            name: '匯豐 Live+', 
+            ai_meta: { bestRate: 34, bestScenario: "一般消費", baseRate: 34, isUnlimitedLike: false },
+            calc: (ctx) => { 
+                if (ctx.isEUR) return { miles:0, note: '<span class="text-danger">🚫 歐盟/英國實體店不回饋</span>', consumedQuota:0 }; 
+                const blk = getBlocklistsConfig();
+                const kw = getKeywordsConfig();
+                if (blk.hsbc_live.some(w => ctx.kwKey.includes(w))) return { miles:0, note: '<span class="text-danger">🚫 非回饋項目</span>', consumedQuota:0 }; 
+                if (['apple_pay','line_pay'].includes(ctx.pay)) return { miles:0, note: '🚫 綁定行動支付無加碼', consumedQuota:0 }; 
+
+                let isAsian7 = ctx.isForeign && kw.asia_7.some(w => ctx.kwKey.includes(w));
+                let displayType = '一般 0.88%'; 
+                let basePts = ctx.twdBase * 0.0088; 
+                let bonusPts = 0;
+                
+                let limitKey = getLimitKey(ctx.db, 'hsbc_live', new Date());
+                let usedSpend = ctx.db.limits[limitKey]?.spend || 0; 
+                let selectedRemaining = Math.max(0, 29600 - usedSpend); 
+                let taskRemaining = Math.max(0, 20000 - usedSpend);     
+
+                let noteHtml = '';
+                let actualQuotaConsumed = 0; 
+                let isWarning = false;
+                
+                if(ctx.isLiveSelect) { 
+                    displayType = '精選'; 
+                    let eligibleSelectedSpend = Math.min(ctx.twdBase, selectedRemaining);
+                    bonusPts += eligibleSelectedSpend * 0.03;
+                    actualQuotaConsumed = Math.max(actualQuotaConsumed, eligibleSelectedSpend);
+                    
+                    if (ctx.twdBase > selectedRemaining) {
+                        isWarning = true;
+                        noteHtml += `<span class="text-danger fw-bold d-block mt-1">⚠️ 單筆爆精選上限，超額僅 0.88% 基礎回饋</span>`;
+                    }
+
+                    if(ctx.db.settings?.hsbc_autopay) { 
+                        let eligibleTaskSpend = Math.min(ctx.twdBase, taskRemaining);
+                        bonusPts += eligibleTaskSpend * 0.01; 
+                        actualQuotaConsumed = Math.max(actualQuotaConsumed, eligibleTaskSpend);
+                        displayType += '+自動扣繳';
+                        if (ctx.twdBase > taskRemaining && !isWarning) {
+                            isWarning = true;
+                            noteHtml += `<span class="text-danger fw-bold d-block mt-1">⚠️ 單筆爆任務上限，超額僅 0.88% 基礎回饋</span>`;
+                        }
+                    } 
+                    
+                    if(isAsian7) { 
+                        let eligibleAsiaSpend = Math.min(ctx.twdBase, taskRemaining);
+                        bonusPts += eligibleAsiaSpend * 0.01; 
+                        actualQuotaConsumed = Math.max(actualQuotaConsumed, eligibleAsiaSpend);
+                        displayType = '亞洲七國 5.88%'; 
+                    } 
+                } else if(ctx.db.settings?.hsbc_autopay) { 
+                    let eligibleTaskSpend = Math.min(ctx.twdBase, taskRemaining);
+                        bonusPts += eligibleTaskSpend * 0.01; 
+                    actualQuotaConsumed = Math.max(actualQuotaConsumed, eligibleTaskSpend);
+                    displayType='一般+任務'; 
+                    if (ctx.twdBase > taskRemaining) {
+                        isWarning = true;
+                        noteHtml += `<span class="text-danger fw-bold d-block mt-1">⚠️ 單筆爆任務上限，超額僅 0.88% 基礎回饋</span>`;
+                    }
+                } 
+                
+                let totalMiles = Math.trunc(basePts + bonusPts) * 2; 
+                let finalNote = `${displayType} <small>1點=2哩</small>` + noteHtml;
+                
+                return { miles: totalMiles, note: finalNote, consumedQuota: actualQuotaConsumed, isWarning: isWarning }; 
+            } 
+        },
+        'taishin_cx': { 
+            name: '台新 國泰世界', 
+            ai_meta: { bestRate: 5, bestScenario: "越飛有哩/國泰官網", baseRate: 22, isUnlimitedLike: false },
+            calc: (ctx) => { 
+                const blk = getBlocklistsConfig();
+                if (blk.taishin.some(w => ctx.kwKey.includes(w))) return { miles:0, note:'<span class="text-danger">🚫 非回饋項目</span>', consumedQuota:0 }; 
+                let baseDiv = ctx.isForeign ? 15 : 22; 
+                let isMobilePay = (ctx.pay === 'apple_pay' || ctx.pay === 'line_pay'); 
+                let isBonus = false;
+
+                if (ctx.cat === 'flight_cx' && !isMobilePay && !ctx.isForeign) { isBonus = true; }
+                else if (ctx.isFlyMode && ctx.cat !== 'flight_ci' && !isMobilePay && (['agoda','booking','klook'].some(w=>ctx.kwKey.includes(w)) || (ctx.isForeign && ctx.pay==='physical'))) { isBonus = true; }
+
+                let limit1M = getLimitVal('taishin_cx'); 
+                let used1M = ctx.db.limits[getLimitKey(ctx.db, 'taishin_cx', new Date())]?.spend || 0;
+                let remaining1M = Math.max(0, limit1M - used1M);
+                let noteHtml = '';
+                
+                if (ctx.twdBase > remaining1M) {
+                     noteHtml = `<span class="text-danger fw-bold d-block mt-1">⚠️ 年度百萬額度已滿，超額部分享基礎回饋</span>`;
+                     let validSpend = remaining1M;
+                     let exceedSpend = ctx.twdBase - remaining1M;
+                     let miles = 0;
+                     if (isBonus) {
+                         miles = Math.trunc(validSpend / 5) + Math.trunc(exceedSpend / baseDiv);
+                     } else {
+                         miles = Math.trunc(ctx.twdBase / baseDiv); 
+                     }
+                     let finalNote = (isBonus ? '越飛有哩 $5' : (ctx.isForeign ? '海外 $15' : '國內 $22')) + noteHtml;
+                     return { miles: miles, note: finalNote, consumedQuota: validSpend, isWarning: true };
+                }
+
+                if (isBonus) {
+                    return { miles: Math.trunc(ctx.twdBase / 5), note: '越飛有哩 $5', consumedQuota: ctx.twdBase };
+                }
+                return { miles: Math.trunc(ctx.twdBase / baseDiv), note: (ctx.isForeign?'海外 $15':'國內 $22'), consumedQuota: ctx.twdBase }; 
+            } 
+        },
+        'hsbc_inf': { 
+            name: '匯豐 旅人無限', 
+            ai_meta: { bestRate: 10, bestScenario: "海外/指定機票", baseRate: 18, isUnlimitedLike: true },
+            calc: (ctx) => { 
+                const blk = getBlocklistsConfig();
+                if (['麥當勞', ...blk.hsbc_base].some(w => ctx.kwKey.includes(w))) return { miles:0, note:'🚫 非回饋', consumedQuota:0 }; 
+                let div = (ctx.cat.startsWith('flight') || ctx.isForeign) ? 10 : 18; 
+                return { miles: Math.trunc(ctx.twdBase/div), note: `$${div}元/哩 (無上限)`, consumedQuota: ctx.twdBase }; 
+            } 
+        },
+        'ctbc_ci': { 
+            name: '中信 華航鼎尊', 
+            ai_meta: { bestRate: 6, bestScenario: "生日海外實體", baseRate: 18, isUnlimitedLike: false },
+            calc: (ctx) => { 
+                const blk = getBlocklistsConfig();
+                const flags = getRuleFlagsConfig();
+                if (blk.ctbc.some(w => ctx.kwKey.includes(w))) return { miles:0, note:'🚫 非回饋', consumedQuota:0 }; 
+                const isOnline = flags.strict_online.includes(ctx.cat) || ctx.pay === 'online'; 
+                const isTruePhysical = !isOnline && (ctx.pay === 'physical' || ctx.pay === 'apple_pay'); 
+                let isBonus = false, div = 18, noteBase = ''; 
+
+                if(ctx.cat === 'flight_ci') { div=9; isBonus=true; noteBase='華航官網 $9'; } 
+                else if(ctx.isForeign && isTruePhysical) { 
+                    if(ctx.isBirthday) { div=6; isBonus=true; noteBase='🎂 生日實體 $6'; } 
+                    else { div=9; isBonus=true; noteBase='海外實體 $9'; } 
+                } 
+
+                if (isBonus) {
+                    let limit = getLimitVal('ctbc_ci');
+                    let used = ctx.db.limits[getLimitKey(ctx.db, 'ctbc_ci', new Date())]?.spend || 0;
+                    let remaining = Math.max(0, limit - used);
+
+                    if (ctx.twdBase <= remaining) return { miles: Math.trunc(ctx.twdBase / div), note: noteBase, consumedQuota: ctx.twdBase };
+                    
+                    let bonusMiles = Math.trunc(remaining / div);
+                    let baseMiles = Math.trunc((ctx.twdBase - remaining) / 18);
+                    let note = remaining === 0 
+                            ? `<span class="text-danger fw-bold d-block mt-1">⚠️ 年度額度已滿，降為一般回饋 ($18/哩)</span>` 
+                            : `<span class="text-danger fw-bold d-block mt-1">⚠️ 單筆爆額度上限，超額部分享一般回饋</span>`;
+                    return { miles: bonusMiles + baseMiles, note: noteBase + note, consumedQuota: remaining, isWarning: true };
+                }
+                return { miles: Math.trunc(ctx.twdBase/18), note: (ctx.isForeign?'海外網購 $18':'一般消費 $18'), consumedQuota: 0 }; 
+            } 
+        }
+    };
+
+    function calculate() {
+        const db = loadDB(); const amt = parseFloat(document.getElementById('amount').value);
+        if(isNaN(amt) || amt === 0) return showCustomAlert('請輸入消費金額！');
+        
+        const currType = document.getElementById('currency-type').value;
+        let twdBase = amt; let twdSpend = amt;
+
+        const fxBoard = document.getElementById('fx-calc-board');
+        if (currType === 'FOREIGN') {
+            const rawRate = parseFloat(document.getElementById('fx-rate-input').value);
+            if(!rawRate) return showCustomAlert('請輸入當下的牌告匯率！');
+            
+            twdBase = Math.round(amt * rawRate);           
+            twdSpend = Math.round(amt * rawRate * 1.015);  
+            
+            fxBoard.innerHTML = `
+                <div class="tdc-flex tdc-justify-between tdc-align-center tdc-mb-1">
+                    <span class="text-secondary small fw-bold">外幣本金折合 (回饋計算基準)</span>
+                    <span class="text-dark fw-bold">NT$ ${twdBase.toLocaleString()}</span>
+                </div>
+                <div class="tdc-flex tdc-justify-between tdc-align-center tdc-mb-1">
+                    <span class="text-secondary small fw-bold">1.5% 結匯手續費</span>
+                    <span class="text-danger fw-bold">+ NT$ ${Math.round(twdBase * 0.015).toLocaleString()}</span>
+                </div>
+                <hr class="my-2" style="border-color: #e879f9; opacity: 0.3;">
+                <div class="tdc-flex tdc-justify-between tdc-align-center">
+                    <span class="text-primary-dark fw-bold">預估總扣款金額</span>
+                    <span class="text-primary-dark fs-5 fw-bold font-hand">NT$ ${twdSpend.toLocaleString()}</span>
+                </div>
+            `;
+            fxBoard.style.display = 'block';
+        } else {
+            fxBoard.style.display = 'none';
+        }
+
+        const kwKey = (document.getElementById('keyword-input').value || '').trim().toLowerCase();
+        const isForeign = (currType === 'FOREIGN');
+        const payMethod = document.getElementById('payment').value;
+        const kwConfig = getKeywordsConfig();
+        const isEUPhysical = isForeign && payMethod !== 'online' && kwConfig.eu_uk.some(w => kwKey.includes(w));
+
+        const rawCat = document.getElementById('category').value;
+        const ctx = {
+            db: db, curr: isForeign ? 'FOREIGN' : 'TWD', cat: rawCat, group: mapCategoryGroup(rawCat),
+            pay: payMethod, kwKey: kwKey,
+            isBirthday: document.getElementById('birthdayMode').checked, isFlyMode: document.getElementById('flyMode').checked,
+            isForeign: isForeign, isEUR: isEUPhysical, twdBase: twdBase, twdSpend: twdSpend, isLiveSelect: false
+        };
+
+        if (isDiningCategory(ctx)) {
+            ctx.isLiveSelect = true;
+        } else if (ctx.cat !== 'dining_hotel' && ctx.cat !== 'delivery' && kwConfig.live.dining.some(w => ctx.kwKey.includes(w))) {
+            ctx.isLiveSelect = true;
+        } else if (ctx.cat !== 'delivery' && (kwConfig.live.shop.some(w => ctx.kwKey.includes(w)) || kwConfig.live.entertainment.some(w => ctx.kwKey.includes(w)))) {
+            ctx.isLiveSelect = true;
+        }
+        
+        currentResults = [];
+        db.settings.enabledBuiltins.forEach(cardId => {
+            if(CARD_RULES[cardId]) { const res = CARD_RULES[cardId].calc(ctx); currentResults.push({ id: cardId, name: CARD_RULES[cardId].name, ...res, twdSpend, twdBase }); }
+        });
+        
+        db.customCards.forEach(c => {
+            if (!c || typeof c !== 'object') return;
+            let div = ctx.isForeign ? c.forRate : c.domRate;
+            let miles = Math.trunc(ctx.twdBase/div);
+            let note = `自訂 $${div}/哩`;
+            let isWarning = false;
+            let consumedQuota = ctx.twdBase;
+
+            if (c.limitAmt && c.limitAmt > 0) {
+                let limitKey = getLimitKey(db, c.id, new Date());
+                let used = db.limits[limitKey]?.spend || 0;
+                let remaining = Math.max(0, c.limitAmt - used);
+
+                if (ctx.twdBase > remaining) {
+                    isWarning = true;
+                    let validSpend = remaining;
+                    miles = Math.trunc(validSpend / div); 
+                    note += `<span class="text-danger fw-bold d-block mt-1">⚠️ 額度已滿，超額部分無回饋</span>`;
+                    consumedQuota = validSpend;
+                }
+            }
+            currentResults.push({ id: c.id, name: escapeHTML(c.name), miles: miles, note: note, consumedQuota: consumedQuota, isWarning: isWarning, twdSpend: ctx.twdSpend, twdBase: ctx.twdBase });
+        });
+        
+        if (amt < 0) currentResults.sort((a,b) => a.miles - b.miles);
+        else currentResults.sort((a,b) => b.miles - a.miles);
+        
+        renderResults(currentResults);
+    }
+
+    function renderResults(list) {
+        const con = document.getElementById('cards-container'); con.innerHTML = '';
+        document.getElementById('result-area').style.display = 'block';
+        list.forEach((c, idx) => {
+            const isWinner = idx === 0 && !c.isWarning; 
+            const integrityColor = '#10b981'; 
+            
+            let trueCostHtml = '';
+            if (c.miles > 0) {
+                let trueCost = (c.twdSpend / c.miles).toFixed(2);
+                trueCostHtml = `<span class="badge bg-light text-secondary border mt-1" style="font-size:0.7rem;">實質成本 $${trueCost}/哩</span>`;
+            }
+
+            const div = document.createElement('div'); div.className = `plan-card ${isWinner ? 'plan-winner' : ''} ${c.isWarning ? 'plan-warning' : ''}`;
+            div.innerHTML = `
+            ${isWinner ? '<span class="winner-badge">最佳選擇</span>' : ''}
+            <div class="tdc-flex tdc-justify-between align-items-start">
+                <div>
+                    <h4 class="card-name">${c.name}</h4>
+                    <div class="text-muted small font-hand mt-1">${c.note}</div>
+                    ${trueCostHtml}
+                </div>
+                <div class="tdc-text-end flex-shrink-0 ms-2">
+                    <div class="card-miles">${c.miles.toLocaleString()} <small style="font-size:0.5em">哩</small></div>
+                    <div class="integrity-badge" style="background:${integrityColor}15; color:${integrityColor}; border:1px solid ${integrityColor}40;">🟢 數據已核實</div>
+                </div>
+            </div>
+            <div class="tdc-flex gap-2 mt-3">
+                <button class="btn-card-action ${isWinner?'btn-record-win':''}" onclick="recordTx(${idx})">記帳</button>
+                <button class="btn-card-action btn-manual-adjust" onclick="openManualAdjust(${idx})">修正</button>
+            </div>`;
+            con.appendChild(div);
+        });
+    }
+
+    function recordTx(idx, isManual = false, originalMiles = 0) {
+        const item = currentResults[idx]; const db = loadDB(); const now = new Date();
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        if(!db.records[monthKey]) db.records[monthKey] = {}; const txId = `tx_${Date.now()}`;
+        
+        let unitText = '哩'; let points = item.miles;
+        if(item.id === 'hsbc_live') { points = Math.trunc(item.miles / 2); unitText = '積分'; } 
+        else if(item.id === 'hsbc_inf') { unitText = '積分'; }
+
+        let kwNote = document.getElementById('keyword-input').value || '一般消費';
+        if(isManual) kwNote += ` (微調: 原算 ${originalMiles})`;
+        if(item.twdBase < 0) kwNote = `(退刷) ${kwNote}`;
+
+        const limitKey = getLimitKey(db, item.id, now);
+
+        db.records[monthKey][txId] = { 
+            id: item.id, 
+            name: item.name, 
+            spend: item.twdBase, 
+            consumedQuota: item.consumedQuota, 
+            miles: points, 
+            unit: unitText, 
+            note: kwNote,
+            createdAt: Date.now(),
+            limitKey: limitKey
+        };
+
+        if(!db.limits[limitKey]) db.limits[limitKey] = { spend:0, points:0 };
+        let qToConsume = item.consumedQuota !== undefined ? item.consumedQuota : item.twdBase;
+        if(qToConsume !== 0) { db.limits[limitKey].spend += qToConsume; }
+        
+        saveDB(db); 
+        document.getElementById('nav-badge-list').innerText = Object.keys(db.records[monthKey]).length;
+        document.getElementById('nav-badge-list').style.display = Object.keys(db.records[monthKey]).length > 0 ? 'inline-block' : 'none';
+        showCustomAlert(`✅ 已加入待結算明細\n${item.name}: ${points>0?'+':''}${points} ${unitText}`);
+    }
+
+    function openManualAdjust(idx) {
+        const item = currentResults[idx]; document.getElementById('manual-adjust-val').value = item.miles;
+        document.getElementById('manual-adjust-idx').value = idx; new bootstrap.Modal(document.getElementById('manualAdjustModal')).show();
+    }
+
+    function confirmManualAdjust() {
+        const idx = document.getElementById('manual-adjust-idx').value; const manualVal = parseFloat(document.getElementById('manual-adjust-val').value);
+        if(isNaN(manualVal)) return showCustomAlert('請輸入有效的數字！');
+        const item = currentResults[idx]; const originalMiles = item.miles; item.miles = manualVal;
+        bootstrap.Modal.getInstance(document.getElementById('manualAdjustModal')).hide(); recordTx(idx, true, originalMiles);
+    }
+    // ==========================================
+    // 5. 總帳、編輯額度與明細管理 (含防空洞保護)
+    // ==========================================
+    function renderStatus() {
+        const db = loadDB(); const now = new Date(); const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        const data = db.records[monthKey] || {}; const agg = {};
+        for(let key in data) { 
+            const r = data[key]; 
+            if(!r || typeof r !== 'object') continue; 
+            if(!agg[r.id]) agg[r.id] = { name: escapeHTML(r.name), spend: 0, miles: 0, unit: escapeHTML(r.unit) }; 
+            agg[r.id].spend += r.spend; agg[r.id].miles += r.miles; 
+        }
+        
+        const statusCon = document.getElementById('status-container'); if(!statusCon) return;
+        if(Object.keys(agg).length === 0) statusCon.innerHTML = '<div class="tdc-text-center py-3 text-muted font-hand fw-bold">本月尚無累積</div>';
+        else {
+            let h = '';
+            for(let id in agg) {
+                const item = agg[id];
+                h += `<div class="tdc-flex tdc-justify-between tdc-align-center tdc-mb-3 pb-3 border-bottom"><div><div class="fw-bold text-dark tdc-mb-1">${item.name}</div><div class="text-muted small">$${item.spend.toLocaleString()}</div></div><div class="text-primary fw-bold fs-5">${item.miles.toLocaleString()} <small class="text-muted" style="font-size:0.6em">${item.unit}</small></div></div>`;
+            }
+            statusCon.innerHTML = h;
+        }
+
+        const limitsCon = document.getElementById('limits-container'); if(!limitsCon) return;
+        let lh = '';
+        (db.settings.enabledBuiltins || []).forEach(id => {
+            const limit = getLimitVal(id); if (limit >= 999999999) return;
+            const def = BUILTIN_DEFS.find(d=>d.id===id);
+            const lKey = getLimitKey(db, id, now); const curr = db.limits[lKey] ? db.limits[lKey].spend : 0; const pct = Math.min(100, Math.max(0, (curr/limit)*100));
+            lh += `<div class="tdc-mb-3">
+                <div class="tdc-flex tdc-justify-between tdc-align-center small tdc-mb-1">
+                    <strong>${def?def.name:id}</strong>
+                    <div class="tdc-flex tdc-align-center gap-2"><span>$${curr.toLocaleString()} / $${limit.toLocaleString()}</span><button class="btn-edit-limit" title="修改進度" onclick="openEditLimit('${id}')"><svg class="lucide"><use href="#icon-pen"/></svg></button></div>
+                </div>
+                <div class="progress" style="height:8px; background-color:#fef3c7;">
+                    <div class="progress-bar ${pct>80?'bg-danger':'bg-warning'}" style="width:${pct}%"></div>
+                </div>
+            </div>`;
+        });
+
+        (db.customCards || []).forEach(c => {
+            if (!c || typeof c !== 'object') return;
+            const lKey = getLimitKey(db, c.id, now); const curr = db.limits[lKey] ? db.limits[lKey].spend : 0;
+            if (c.limitAmt && c.limitAmt > 0) {
+                const pct = Math.min(100, Math.max(0, (curr/c.limitAmt)*100));
+                lh += `<div class="tdc-mb-3">
+                    <div class="tdc-flex tdc-justify-between tdc-align-center small tdc-mb-1">
+                        <strong>${escapeHTML(c.name)} <span class="text-muted">(自訂${c.isAnnual?'年':'月'})</span></strong>
+                        <div class="tdc-flex tdc-align-center gap-2"><span>$${curr.toLocaleString()} / $${c.limitAmt.toLocaleString()}</span><button class="btn-edit-limit" title="修改進度" onclick="openEditLimit('${c.id}')"><svg class="lucide"><use href="#icon-pen"/></svg></button></div>
+                    </div>
+                    <div class="progress" style="height:8px; background-color:#fef3c7;">
+                        <div class="progress-bar ${pct>80?'bg-danger':'bg-warning'}" style="width:${pct}%"></div>
+                    </div>
+                </div>`;
+            } else {
+                lh += `<div class="tdc-mb-3">
+                    <div class="tdc-flex tdc-justify-between tdc-align-center small tdc-mb-1">
+                        <strong>${escapeHTML(c.name)} <span class="text-muted">(自訂無上限)</span></strong>
+                        <div class="tdc-flex tdc-align-center gap-2"><span>已刷 $${curr.toLocaleString()}</span><button class="btn-edit-limit" title="修改進度" onclick="openEditLimit('${c.id}')"><svg class="lucide"><use href="#icon-pen"/></svg></button></div>
+                    </div>
+                </div>`;
+            }
+        });
+        limitsCon.innerHTML = lh || '<div class="text-muted small">目前主力卡皆為無上限</div>';
+    }
+
+    function renderList() {
+        const db = loadDB(); const now = new Date(); const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        const data = db.records[monthKey] || {}; const con = document.getElementById('transaction-list-container'); con.innerHTML = '';
+        const groups = {}; let count = 0;
+        for(let key in data) { 
+            const r = data[key]; 
+            if(!r || typeof r !== 'object') continue; 
+            const safeName = escapeHTML(r.name);
+            if(!groups[safeName]) groups[safeName] = []; 
+            groups[safeName].push({ ...r, key }); count++; 
+        }
+        
+        document.getElementById('nav-badge-list').innerText = count; document.getElementById('nav-badge-list').style.display = count > 0 ? 'inline-block' : 'none';
+        document.getElementById('pending-count').innerText = `${count} 筆`;
+
+        if(count === 0) { con.innerHTML = '<div class="tdc-text-center text-muted py-5 font-hand fw-bold">本月目前沒有待結算的紀錄</div>'; return; }
+
+        for(let name in groups) {
+            let html = `<div class="card-box p-0 tdc-mb-3 overflow-hidden"><div class="bg-light p-2 fw-bold text-primary px-3 border-bottom">${name}</div><div>`;
+            groups[name].forEach(item => {
+                let dateStr = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : new Date(parseInt(item.key.split('_')[1] || Date.now())).toLocaleDateString();
+                html += `
+                <div class="tdc-flex tdc-justify-between tdc-align-center p-3 border-bottom">
+                    <div>
+                        <div class="fw-bold ${item.spend<0?'text-danger':'text-dark'}">${escapeHTML(item.note)}</div>
+                        <div class="text-muted" style="font-size:0.7rem;">${dateStr}</div>
+                    </div>
+                    <div class="tdc-flex tdc-align-center">
+                        <div class="tdc-text-end me-3">
+                            <div class="${item.spend<0?'text-danger':''} fw-bold">$${item.spend.toLocaleString()}</div>
+                            <div class="text-primary small font-hand">${item.miles>0?'+':''}${item.miles} ${escapeHTML(item.unit)}</div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger rounded-circle p-1 tdc-flex" onclick="delTx('${monthKey}','${item.key}')"><svg class="lucide" style="width:14px;height:14px;"><use href="#icon-trash"/></svg></button>
+                    </div>
+                </div>`;
+            });
+            html += '</div></div>'; con.innerHTML += html;
+        }
+    }
+
+    function delTx(monthKey, txId) {
+        if(!confirm('確定要刪除這筆紀錄嗎？\n（同時會退還該卡片的累積額度）')) return;
+        const db = loadDB(); const rec = db.records[monthKey] ? db.records[monthKey][txId] : null;
+        if(rec && typeof rec === 'object') { 
+            const limitKey = rec.limitKey || getLimitKey(db, rec.id, new Date(parseInt(txId.split('_')[1] || Date.now()))); 
+            let qToRestore = rec.consumedQuota !== undefined ? rec.consumedQuota : rec.spend;
+            if(db.limits[limitKey]) { db.limits[limitKey].spend -= qToRestore; if(db.limits[limitKey].spend < 0) db.limits[limitKey].spend = 0; } 
+            delete db.records[monthKey][txId]; saveDB(db); renderList(); renderStatus();
+        }
+    }
+
+    function clearCurrentStats() {
+        if(!confirm('⚠️ 確定要重置本期所有數據嗎？\n（這會將本月相關的額度全部退還）')) return;
+        const db = loadDB(); const now = new Date(); const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        if(db.records[monthKey]) {
+            for(let txId in db.records[monthKey]) {
+                const rec = db.records[monthKey][txId];
+                if(!rec || typeof rec !== 'object') continue;
+                const lKey = rec.limitKey || getLimitKey(db, rec.id, now);
+                let qToRestore = rec.consumedQuota !== undefined ? rec.consumedQuota : rec.spend;
+                if(db.limits[lKey]) { db.limits[lKey].spend -= qToRestore; if(db.limits[lKey].spend < 0) db.limits[lKey].spend = 0; }
+            }
+            db.records[monthKey] = {}; saveDB(db); renderStatus(); renderList();
+        }
+    }
+
+    function batchImport() {
+        if(!confirm('確定將明細全部存入倉庫？')) return;
+        const db = loadDB(); const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+        const data = db.records[monthKey]; if(!data) return;
+        
+        const autoAssetsConfig = getAutoAssetsConfig(); // 動態取得進倉設定 (優先遠端)
+        
+        for(let k in data) {
+            const r = data[k]; 
+            if(!r || typeof r !== 'object') continue;
+            const rule = autoAssetsConfig[r.id];
+            if(rule) {
+                let asset = db.warehouse.find(a => a && typeof a === 'object' && a.targetAirline === rule.target && a.type === rule.type);
+                if(!asset) { asset = { type: rule.type, targetAirline: rule.target, name: rule.target, current: 0, unitPoints:rule.unitPoints, unitMiles:rule.unitMiles, bonusReq:0, bonusGive:0 }; db.warehouse.push(asset); }
+                asset.current = (Number(asset.current) || 0) + r.miles;
+            }
+        }
+        db.records[monthKey] = {}; saveDB(db); renderStatus(); renderList(); renderWarehouse(); showCustomAlert('✅ 已全部入庫！');
+    }
+
+    function confirmEditLimit() {
+        const id = document.getElementById('edit-limit-id').value;
+        let val = parseFloat(document.getElementById('edit-limit-val').value);
+        if(isNaN(val) || val < 0) val = 0;
+        const db = loadDB(); const now = new Date(); const limitKey = getLimitKey(db, id, now);
+        if(!db.limits[limitKey]) db.limits[limitKey] = { spend:0, points:0 };
+        db.limits[limitKey].spend = val;
+        saveDB(db); bootstrap.Modal.getInstance(document.getElementById('editLimitModal')).hide();
+        renderStatus(); showCustomAlert('✅ 卡片額度已成功手動覆寫！');
+    }
+    
+    function openEditLimit(id) {
+        document.getElementById('edit-limit-id').value = id;
+        document.getElementById('edit-limit-val').value = '';
+        new bootstrap.Modal(document.getElementById('editLimitModal')).show();
+    }
+
