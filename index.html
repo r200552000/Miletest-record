@@ -262,7 +262,7 @@
             <div class="tdc-flex tdc-align-center gap-2 tdc-mb-1">
                 <span class="fw-bold text-secondary" style="white-space: nowrap;">1 外幣 =</span>
                 <div class="input-wrapper tdc-grow-1">
-                    <input type="number" id="fx-rate-input" class="form-control pe-5" placeholder="輸入牌告數字" inputmode="decimal" min="0" step="0.0001" oninput="updateFxFeedback()">
+                    <input type="number" id="fx-rate-input" class="form-control pe-5" placeholder=" " inputmode="decimal" min="0" step="0.0001" oninput="updateFxFeedback()">
                     <button class="btn-inline-clear" type="button" onclick="clearInput('fx-rate-input')">⊗</button>
                 </div>
                 <span class="fw-bold text-secondary">TWD</span>
@@ -275,7 +275,7 @@
         <div class="tdc-mb-3 mt-3">
           <label class="form-label" id="amount-label">🇹🇼 消費金額 (TWD)</label>
           <div class="input-wrapper">
-            <input type="number" id="amount" class="form-control pe-5" placeholder="0" inputmode="decimal" oninput="checkInputStyle(this)">
+            <input type="number" id="amount" class="form-control pe-5" placeholder=" " inputmode="decimal" oninput="checkInputStyle(this)">
             <button class="btn-inline-clear" type="button" onclick="clearInput('amount')">⊗</button>
           </div>
           <button class="btn btn-outline-danger btn-sm tdc-w-100 mt-2 rounded-pill fw-bold" onclick="toggleNegative('amount')"><svg class="lucide me-1" style="width:14px;height:14px;"><use href="#icon-refresh"/></svg>退刷 / 修正上限額度</button>
@@ -333,7 +333,7 @@
             <div class="input-block-card">
                 <div class="input-block-title text-primary"><svg class="lucide me-2"><use href="#icon-plane"/></svg> 板塊 A：存入航空哩程</div>
                 <div class="tdc-mb-2"><input id="native-airline-name" class="form-control" placeholder="航司名稱 (例如: 華航)"></div>
-                <div class="tdc-mb-3"><input id="native-current" type="number" class="form-control" placeholder="持有數量"></div>
+                <div class="tdc-mb-3"><input id="native-current" type="number" class="form-control" placeholder=" "></div>
                 <button onclick="addNativeAsset()" class="btn btn-outline-primary tdc-w-100 rounded-pill font-hand fw-bold">存入帳戶</button>
                 <div class="small text-muted mt-2 tdc-text-center">💡 系統將主動比對相似名稱並引導歸戶合併</div>
             </div>
@@ -342,35 +342,36 @@
                 <div class="input-block-title text-secondary"><svg class="lucide me-2"><use href="#icon-box"/></svg> 板塊 B：通用積分資產</div>
                 <div class="tdc-row tdc-mb-2">
                     <div class="tdc-col-7"><input id="raw-point-name" class="form-control" placeholder="名稱 (如: 萬豪, 小樹點)"></div>
-                    <div class="tdc-col-5"><input id="raw-point-current" type="number" class="form-control" placeholder="持有數量"></div>
+                    <div class="tdc-col-5"><input id="raw-point-current" type="number" class="form-control" placeholder=" "></div>
                 </div>
                 <button onclick="addRawAsset()" class="btn btn-outline-secondary tdc-w-100 rounded-pill font-hand fw-bold">存入資產庫</button>
                 <div class="small text-muted mt-2 tdc-text-center">💡 僅記錄名稱與數量，不具備換算公式</div>
             </div>
 
             <div class="input-block-card">
-                <div class="input-block-title text-warning" style="color:#d97706;"><svg class="lucide me-2"><use href="#icon-rotate"/></svg> 板塊 C：積分換算工具</div>
+                <div class="input-block-title text-warning" style="color:#d97706;"><svg class="lucide me-2"><use href="#icon-rotate"/></svg> 板塊 C：實際轉點操作</div>
                 <div class="tdc-row tdc-mb-2">
-                    <div class="tdc-col-7"><input id="trans-source-name" class="form-control" placeholder="來源 (如: 匯豐旅人)"></div>
-                    <div class="tdc-col-5"><input id="trans-current" type="number" class="form-control" placeholder="持有數量"></div>
+                    <div class="tdc-col-7"><input id="trans-source-name" class="form-control" placeholder="扣除來源 (如: 匯豐旅人)"></div>
+                    <div class="tdc-col-5"><input id="trans-current" type="number" class="form-control" placeholder=" "></div>
                 </div>
-                <div class="tdc-mb-2"><input id="trans-target-airline" class="form-control" placeholder="欲兌換航司 (歸戶依據)"></div>
+                <div class="tdc-mb-2"><input id="trans-target-airline" class="form-control" placeholder="轉入航司 (如: 華航)"></div>
                 <div class="bg-light p-2 rounded-3 border tdc-mb-3">
-                    <label class="small text-muted fw-bold tdc-mb-1">兌換公式 (例如: 3點 = 1哩)</label>
+                    <label class="small text-muted fw-bold tdc-mb-1">轉出公式 (例如: 3點 = 1哩)</label>
                     <div class="tdc-flex tdc-align-center gap-2 tdc-mb-2">
-                        <input id="trans-unit-points" type="number" class="form-control" placeholder="3"> <span>點 =</span>
-                        <input id="trans-unit-miles" type="number" class="form-control" placeholder="1"> <span>哩</span>
+                        <input id="trans-unit-points" type="number" class="form-control" placeholder=" "> <span>點 =</span>
+                        <input id="trans-unit-miles" type="number" class="form-control" placeholder=" "> <span>哩</span>
                     </div>
                     <label class="small text-primary fw-bold tdc-mb-1 mt-2">✨ 額外轉換加碼 <span class="text-danger">(選填)</span></label>
                     <div class="tdc-flex tdc-align-center gap-2">
                         <span class="small fw-bold text-muted">每滿</span>
-                        <input id="trans-bonus-req" type="number" class="form-control form-control-sm" placeholder="如: 60000">
+                        <input id="trans-bonus-req" type="number" class="form-control form-control-sm" placeholder=" ">
                         <span class="small fw-bold text-muted">加贈</span>
-                        <input id="trans-bonus-give" type="number" class="form-control form-control-sm" placeholder="如: 5000">
+                        <input id="trans-bonus-give" type="number" class="form-control form-control-sm" placeholder=" ">
                         <span class="small fw-bold text-muted">哩</span>
                     </div>
                 </div>
-                <button onclick="addTransferAsset()" class="btn btn-outline-warning tdc-w-100 rounded-pill font-hand fw-bold" style="color:#b45309; border-color:#d97706;">存入試算工具</button>
+                <button onclick="addTransferAsset()" class="btn btn-outline-warning tdc-w-100 rounded-pill font-hand fw-bold" style="color:#b45309; border-color:#d97706;">確認轉出並扣抵</button>
+                <div class="small text-muted mt-2 tdc-text-center">💡 系統將自動扣除來源餘額，並併入目標航司</div>
             </div>
             
             <div id="warehouse-list"></div>
@@ -428,7 +429,6 @@
         </div>
     </div>
   </div>
-
   <div class="nav-bottom">
     <button class="nav-item active" onclick="switchPage('calc', this)"><svg class="lucide"><use href="#icon-calc"/></svg>計算</button>
     <button class="nav-item" onclick="switchPage('list', this)"><div style="position:relative;"><svg class="lucide"><use href="#icon-list"/></svg><span id="nav-badge-list" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none; font-size: 0.5rem;">0</span></div>明細</button>
@@ -461,7 +461,7 @@
         <h5 class="fw-bold tdc-mb-3 tdc-flex tdc-align-center" style="color: #b45309;"><svg class="lucide me-2"><use href="#icon-pen"/></svg> 人工微調修正</h5>
         <p class="small text-muted tdc-mb-3">若系統計算因匯率或四捨五入產生誤差，請在此輸入您實際獲取的正確數字以進行記帳：</p>
         <div class="input-wrapper tdc-mb-3">
-            <input type="number" id="manual-adjust-val" class="form-control border-warning pe-5" placeholder="例如: 1500" style="font-size: 1.2rem; color: #b45309 !important;">
+            <input type="number" id="manual-adjust-val" class="form-control border-warning pe-5" placeholder=" " style="font-size: 1.2rem; color: #b45309 !important;">
             <button class="btn-inline-clear" type="button" onclick="clearInput('manual-adjust-val')">⊗</button>
         </div>
         <input type="hidden" id="manual-adjust-idx">
@@ -479,7 +479,7 @@
         <h5 class="fw-bold tdc-mb-3 tdc-flex tdc-align-center text-primary-dark"><svg class="lucide me-2"><use href="#icon-pen"/></svg> 修改已消耗額度</h5>
         <p class="small text-muted tdc-mb-3">請輸入此卡片本期「已經消耗」的累積金額。系統將直接覆寫現有進度：</p>
         <div class="input-wrapper tdc-mb-3">
-            <input type="number" id="edit-limit-val" class="form-control border-primary pe-5" placeholder="例如: 15000" style="font-size: 1.2rem; color: #1e40af !important;">
+            <input type="number" id="edit-limit-val" class="form-control border-primary pe-5" placeholder=" " style="font-size: 1.2rem; color: #1e40af !important;">
             <button class="btn-inline-clear" type="button" onclick="clearInput('edit-limit-val')">⊗</button>
         </div>
         <input type="hidden" id="edit-limit-id">
@@ -542,11 +542,10 @@
                 <li>金鑰僅加密儲存於設備本地，請安心使用。</li>
               </ul>
             </div>
-            <button class="btn btn-primary tdc-w-100 rounded-pill fw-bold font-hand py-2 mt-3" onclick="saveSettings()">儲存設定</button>
           </div>
           <div class="mb-4">
             <div class="fw-bold tdc-mb-2 text-primary">加碼資格確認</div>
-            <label class="switch-group tdc-mb-2">
+            <label class="switch-group tdc-mb-2" for="setting-hsbc-autopay">
                 <span class="switch-label">匯豐 Live+ 自動扣繳 <small class="text-muted fw-normal">(精選+1%)</small></span>
                 <input class="form-check-input" type="checkbox" id="setting-hsbc-autopay">
             </label>
@@ -572,6 +571,9 @@
             <button class="btn btn-warning tdc-w-100 fw-bold rounded-pill tdc-mb-2 font-hand text-white" style="background: #f59e0b; border:none; padding:12px;" onclick="exportDataMagic()">複製搬家代碼</button>
             <button class="btn btn-primary tdc-w-100 fw-bold rounded-pill font-hand" style="background: #3b82f6; border:none; padding:12px;" onclick="triggerRestoreFlow()">貼上還原代碼</button>
           </div>
+          
+          <button class="btn btn-primary tdc-w-100 rounded-pill fw-bold font-hand py-2 mb-3" onclick="saveSettings()">儲存設定</button>
+          
         </div>
       </div>
     </div>
@@ -630,6 +632,7 @@
   </div>
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
   <script>
     /* ==========================================
        TDC 航空累哩工具 v14.9 終極防禦版 - 核心 JS 運算引擎
@@ -1721,8 +1724,7 @@
         document.getElementById('edit-limit-val').value = '';
         new bootstrap.Modal(document.getElementById('editLimitModal')).show();
     }
-
-    // ==========================================
+        // ==========================================
     // 6. 倉庫管理 2.0 (三位一體)
     // ==========================================
     function renderWarehouse() {
@@ -1810,18 +1812,122 @@
     }
 
     function addTransferAsset() {
-        const name = document.getElementById('trans-source-name').value.trim(); const qty = parseInt(document.getElementById('trans-current').value);
+        const name = document.getElementById('trans-source-name').value.trim(); 
+        const rawQty = Number(document.getElementById('trans-current').value);
         const tgt = document.getElementById('trans-target-airline').value.trim();
-        const uPts = parseFloat(document.getElementById('trans-unit-points').value); const uMis = parseFloat(document.getElementById('trans-unit-miles').value);
-        if(!name || isNaN(qty) || qty <= 0 || !tgt || isNaN(uPts) || isNaN(uMis)) return showCustomAlert('請填寫基礎轉換資訊！');
+        const uPts = parseFloat(document.getElementById('trans-unit-points').value); 
+        const uMis = parseFloat(document.getElementById('trans-unit-miles').value);
         
-        let bonusReq = parseFloat(document.getElementById('trans-bonus-req').value) || 0; let bonusGive = parseFloat(document.getElementById('trans-bonus-give').value) || 0;
-        const db = loadDB(); let asset = db.warehouse.find(a => a && typeof a === 'object' && a.type === 'transfer' && a.name === name);
-        if(!asset) { asset = { type: 'transfer', targetAirline: tgt, name: name, current: 0, unitPoints: uPts, unitMiles: uMis, bonusReq, bonusGive }; db.warehouse.push(asset); }
-        if(bonusReq > 0) { asset.bonusReq = bonusReq; asset.bonusGive = bonusGive; }
-        asset.current = (Number(asset.current) || 0) + qty; saveDB(db); 
-        clearInput('trans-source-name'); clearInput('trans-current'); clearInput('trans-target-airline'); clearInput('trans-unit-points'); clearInput('trans-unit-miles'); clearInput('trans-bonus-req'); clearInput('trans-bonus-give');
-        renderWarehouse(); showCustomAlert('✅ 試算資產存入成功！');
+        const rawBonusReq = document.getElementById('trans-bonus-req').value;
+        const rawBonusGive = document.getElementById('trans-bonus-give').value;
+        let bonusReq = parseFloat(rawBonusReq); 
+        let bonusGive = parseFloat(rawBonusGive);
+
+        if(!name || !tgt || isNaN(uPts) || uPts <= 0 || isNaN(uMis) || uMis <= 0) {
+            return showCustomAlert('請填寫完整的轉出資訊，且兌換比例必須大於 0！');
+        }
+        if(!Number.isInteger(rawQty) || rawQty <= 0) {
+            return showCustomAlert('❌ 轉出數量必須為大於 0 的正整數！');
+        }
+
+        const hasBonusReq = rawBonusReq.trim() !== '';
+        const hasBonusGive = rawBonusGive.trim() !== '';
+        if(hasBonusReq || hasBonusGive) {
+            if(!hasBonusReq || !hasBonusGive || isNaN(bonusReq) || isNaN(bonusGive) || bonusReq <= 0 || bonusGive <= 0 || !Number.isInteger(bonusReq) || !Number.isInteger(bonusGive)) {
+                return showCustomAlert('❌ 額外轉換加碼設定錯誤！必須同時填寫「每滿」與「加贈」，且皆須為大於 0 的有效正整數。');
+            }
+        }
+        
+        const qty = rawQty;
+        const db = loadDB(); 
+
+        const normalizeStr = (str) => typeof str === 'string' ? str.replace(/\s+/g, '').toLowerCase() : '';
+        
+        const rawNormName = normalizeStr(name);
+        const SOURCE_ALIAS_MAP = {
+            [normalizeStr('匯豐旅人')]: '匯豐 旅人積分',
+            [normalizeStr('匯豐旅人積分')]: '匯豐 旅人積分',
+            [normalizeStr('匯豐Live+')]: '匯豐Live+積分',
+            [normalizeStr('匯豐Live+積分')]: '匯豐Live+積分'
+        };
+        
+        let finalSourceName = SOURCE_ALIAS_MAP[rawNormName] || name;
+        let finalNormSourceName = normalizeStr(finalSourceName);
+        
+        let sourceAsset = db.warehouse.find(a => a && typeof a === 'object' && (a.type === 'transfer' || a.type === 'raw') && a.name === finalSourceName);
+        if(!sourceAsset) {
+            sourceAsset = db.warehouse.find(a => a && typeof a === 'object' && (a.type === 'transfer' || a.type === 'raw') && normalizeStr(a.name) === finalNormSourceName);
+        }
+        
+        if(!sourceAsset) {
+            return showCustomAlert(`❌ 找不到名為「${name}」的可扣除來源資產，請先確認倉庫內是否已有此項目。`);
+        }
+        
+        let currentBalance = Number(sourceAsset.current) || 0;
+        if(currentBalance < qty) {
+            return showCustomAlert(`❌ 轉出失敗！「${sourceAsset.name || name}」餘額不足 (目前餘額僅: ${currentBalance.toLocaleString()})`);
+        }
+
+        let baseMiles = Math.trunc(qty * (uMis / uPts));
+        let bonusMiles = (hasBonusReq && hasBonusGive) ? Math.trunc(qty / bonusReq) * bonusGive : 0;
+        let totalAcquiredMiles = baseMiles + bonusMiles;
+
+        if (totalAcquiredMiles <= 0) {
+            return showCustomAlert('❌ 依目前轉換比例，本次轉出實得哩程為 0，操作已自動取消。');
+        }
+
+        sourceAsset.current = currentBalance - qty;
+
+        const rawNormTgt = normalizeStr(tgt);
+        let finalTgtStr = tgt;
+        let finalNormTgt = rawNormTgt;
+
+        const TARGET_ALIAS_MAP = {
+            [normalizeStr('華航')]: '中華航空',
+            [normalizeStr('中華航空')]: '中華航空',
+            [normalizeStr('國泰')]: '國泰航空',
+            [normalizeStr('國泰航空')]: '國泰航空',
+            [normalizeStr('亞萬')]: '國泰航空',
+            [normalizeStr('亞洲萬里通')]: '國泰航空',
+            [normalizeStr('國泰航空(亞洲萬里通)')]: '國泰航空',
+            [normalizeStr('長榮')]: '長榮航空',
+            [normalizeStr('長榮航空')]: '長榮航空'
+        };
+
+        if (TARGET_ALIAS_MAP[rawNormTgt]) {
+            finalTgtStr = TARGET_ALIAS_MAP[rawNormTgt];
+            finalNormTgt = normalizeStr(finalTgtStr);
+        }
+
+        let targetAsset = db.warehouse.find(a => a && typeof a === 'object' && a.type === 'airline' && a.targetAirline === finalTgtStr);
+        if (!targetAsset) {
+            targetAsset = db.warehouse.find(a => a && typeof a === 'object' && a.type === 'airline' && normalizeStr(a.targetAirline) === finalNormTgt);
+        }
+        if (!targetAsset) {
+            targetAsset = db.warehouse.find(a => a && typeof a === 'object' && a.type === 'airline' && typeof a.targetAirline === 'string' && (normalizeStr(a.targetAirline).includes(finalNormTgt) || finalNormTgt.includes(normalizeStr(a.targetAirline))));
+        }
+
+        let finalTargetName = finalTgtStr;
+        if (!targetAsset) {
+            targetAsset = { type: 'airline', targetAirline: finalTargetName, name: finalTargetName, current: 0, unitPoints: 1, unitMiles: 1, bonusReq: 0, bonusGive: 0 };
+            db.warehouse.push(targetAsset);
+        } else {
+            finalTargetName = targetAsset.targetAirline || targetAsset.name || finalTgtStr;
+        }
+
+        targetAsset.current = (Number(targetAsset.current) || 0) + totalAcquiredMiles;
+
+        saveDB(db); 
+        clearInput('trans-source-name'); 
+        clearInput('trans-current'); 
+        clearInput('trans-target-airline'); 
+        clearInput('trans-unit-points'); 
+        clearInput('trans-unit-miles'); 
+        clearInput('trans-bonus-req'); 
+        clearInput('trans-bonus-give');
+        
+        renderWarehouse(); 
+        showCustomAlert(`✅ 轉點成功！\n已從「${sourceAsset.name || name}」扣除 ${qty.toLocaleString()} 點\n「${finalTargetName}」增加 ${totalAcquiredMiles.toLocaleString()} 哩`);
     }
 
     function delWarehouseAsset(idx) { 
