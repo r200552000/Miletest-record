@@ -60,7 +60,7 @@
     .modal-backdrop { z-index: 1040 !important; }
     body.confirm-modal-open .modal-backdrop:last-child { z-index: 2050 !important; }
 
-    /* v15.0 通用版面與元件 */
+    /* v14.9 通用版面與元件 */
     .header { background: #ffffff; padding: 15px 20px 25px 20px; border-bottom-left-radius: 36px; border-bottom-right-radius: 36px; position: sticky; top: 0; box-shadow: var(--shadow-draw); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; height: 90px; border-bottom: 3px dashed #bae6fd; z-index: 100; box-sizing: border-box; }
     .header-icon { width: 40px; height: 40px; background: #eff6ff; border: 2px solid #bfdbfe; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 1.1rem; transform: rotate(-5deg); margin-right: 10px; flex-shrink: 0; }
     
@@ -538,7 +538,7 @@
               <div class="fw-bold tdc-mb-1 tdc-flex tdc-align-center"><svg class="lucide me-1"><use href="#icon-shield"/></svg> 資安與隱私承諾</div>
               <ul class="mb-0 ps-3">
                 <li>本工具為純前端架構，無第三方伺服器。</li>
-                <li>金鑰僅加密儲存於設備本地，請安心使用。</li>
+                <li>金鑰僅儲存於設備本地，請安心使用。</li>
               </ul>
             </div>
           </div>
@@ -590,7 +590,6 @@
       </div>
     </div>
   </div>
-
   <div class="modal fade" id="guideModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-scrollable">
       <div class="modal-content border-0">
@@ -636,7 +635,7 @@
     /* ==========================================
        TDC 航空累哩工具 v15.0 終極防禦版 - 核心 JS 運算引擎
        ========================================== */
-    const DB_KEY = 'MILES_APP_V14_9'; 
+    const DB_KEY = 'MILES_APP_V15_1'; 
     let currentResults = [];
     let plannerSelectedAssets = new Set(); 
 
@@ -804,7 +803,11 @@
     // 優先抓取 Github Gist -> 若失敗或格式錯誤 -> 退回讀取 Cache -> 若無 Cache -> 降級使用 DEFAULT_RULES。
     async function fetchRules() {
         try {
-            const res = await fetch(PRIMARY_RULES_URL);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            const res = await fetch(PRIMARY_RULES_URL, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
             if (!res.ok) throw new Error("Network response was not ok");
             const data = await res.json();
 
@@ -909,9 +912,20 @@
     // 1. 系統資料庫與基礎操作 (強型別防禦版)
     // ==========================================
     function loadDB() {
-        const raw = localStorage.getItem(DB_KEY);
-        const defaultDB = { settings: { enabledBuiltins: ['hsbc_live','taishin_cx','ctbc_ci','hsbc_inf','ctbc_ci_inf'], billingDays: { ...DEFAULT_BILLING }, hsbc_autopay: true }, customCards: [], records: {}, limits: {}, warehouse: [] };
-        if(!raw) return defaultDB;
+        let raw = localStorage.getItem(DB_KEY);
+        const defaultBuiltins = BUILTIN_DEFS.filter(c => c.default).map(c => c.id);
+        const defaultDB = { settings: { enabledBuiltins: defaultBuiltins, billingDays: { ...DEFAULT_BILLING }, hsbc_autopay: true }, customCards: [], records: {}, limits: {}, warehouse: [] };
+        
+        if(!raw) {
+            const oldRaw = localStorage.getItem('MILES_APP_V14_9');
+            if(oldRaw) {
+                raw = oldRaw;
+                localStorage.setItem(DB_KEY, raw);
+            } else {
+                return defaultDB;
+            }
+        }
+        
         try {
             const db = JSON.parse(raw);
             if(!db.records || typeof db.records !== 'object' || Array.isArray(db.records)) db.records = {};
