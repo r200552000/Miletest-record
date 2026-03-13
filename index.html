@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TDC環哩匯X航空消費累哩工具（AI版） V15.0</title>
+  <title>TDC環哩匯X航空消費累哩工具（AI版） V15.1</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Mali:wght@500;700&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
     /* =========================
-       排版防禦系統 & 基礎變數 (v15.0 終極防禦版)
+       排版防禦系統 & 基礎變數 (v15.1 終極防禦版)
        ========================= */
     .tdc-row { display: flex; flex-wrap: wrap; margin-left: -5px; margin-right: -5px; }
     .tdc-col-5 { width: 41.666%; padding-left: 5px; padding-right: 5px; box-sizing: border-box; }
@@ -60,7 +60,7 @@
     .modal-backdrop { z-index: 1040 !important; }
     body.confirm-modal-open .modal-backdrop:last-child { z-index: 2050 !important; }
 
-    /* v14.9 通用版面與元件 */
+    /* v15.1 通用版面與元件 */
     .header { background: #ffffff; padding: 15px 20px 25px 20px; border-bottom-left-radius: 36px; border-bottom-right-radius: 36px; position: sticky; top: 0; box-shadow: var(--shadow-draw); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; height: 90px; border-bottom: 3px dashed #bae6fd; z-index: 100; box-sizing: border-box; }
     .header-icon { width: 40px; height: 40px; background: #eff6ff; border: 2px solid #bfdbfe; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 1.1rem; transform: rotate(-5deg); margin-right: 10px; flex-shrink: 0; }
     
@@ -170,7 +170,7 @@
     <symbol id="icon-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-.5-.5-2.5 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6 4-3 3-3-1-2 2 4 4 2-2-1-3 3-3 4 6 1.2-.7c.4-.2.7-.6.6-1.1z"/></symbol>
     <symbol id="icon-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
     <symbol id="icon-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1-1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
-    <symbol id="icon-cake" viewBox="0 0 24 24"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5-2 4-2 2.5-2 4-2 2.5-2 4-2 2.5-2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/><path d="M7 4h.01"/><path d="M12 4h.01"/><path d="M17 4h.01"/></symbol>
+    <symbol id="icon-cake" viewBox="0 0 24 24"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5-2 4-2 2.5-2 4-2 2.5-2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/><path d="M7 4h.01"/><path d="M12 4h.01"/><path d="M17 4h.01"/></symbol>
     <symbol id="icon-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></symbol>
     <symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
     <symbol id="icon-calc" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/></symbol>
@@ -198,7 +198,7 @@
         <div id="sync-indicator" class="sync-dot sync-green me-2" title="點擊強制對齊最新規章" onclick="triggerSync()"></div>
         <div style="min-width: 0;">
             <h5>TDC環哩匯X航空消費累哩工具（AI版）</h5>
-            <small class="text-secondary fw-bold">V15.0 終極防禦版<span id="hsbc-adapter-status" class="badge bg-warning text-dark ms-2" style="font-size: 0.6rem; transform: translateY(-2px); display: inline-block;">Rules: Standby</span></small>
+            <small class="text-secondary fw-bold">V15.1 終極防禦版<span id="hsbc-adapter-status" class="badge bg-warning text-dark ms-2" style="font-size: 0.6rem; transform: translateY(-2px); display: inline-block;">Rules: Standby</span></small>
         </div>
       </div>
       <div class="header-btn-group">
@@ -296,6 +296,7 @@
       <div id="fx-calc-board" class="tdc-mb-3 p-3 shadow-sm" style="background: #fdf4ff; border: 2px dashed #e879f9; border-radius: 16px; display: none;"></div>
 
       <div id="result-area" style="display: none;">
+        <div id="tactical-advice-container" style="display: none;"></div>
         <div id="cards-container"></div>
       </div>
     </div>
@@ -628,12 +629,11 @@
       </div>
     </div>
   </div>
-  
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
     /* ==========================================
-       TDC 航空累哩工具 v15.0 終極防禦版 - 核心 JS 運算引擎
+       TDC 航空累哩工具 v15.1 終極防禦版 - 核心 JS 運算引擎
        ========================================== */
     const DB_KEY = 'MILES_APP_V15_1'; 
     let currentResults = [];
@@ -647,7 +647,7 @@
 
     // [維護者註解] 這是最底層的安全網，當網路斷線且無快取時，系統會依賴此物件來維持基本運作，避免白屏。
     const DEFAULT_RULES = {
-        version: "v15.0.0",
+        version: "v15.1.0",
         last_updated: "2026-03-11",
         ui_categories: [
             { id: "general", label: "🛍️ 一般消費" },
@@ -1391,6 +1391,7 @@
     };
 
     function calculate() {
+        if (typeof renderTacticalAdvice === 'function') renderTacticalAdvice(null);
         const db = loadDB(); const amt = parseFloat(document.getElementById('amount').value);
         if(isNaN(amt) || amt === 0) return showCustomAlert('請輸入消費金額！');
         
@@ -1481,6 +1482,97 @@
         else currentResults.sort((a,b) => b.miles - a.miles);
         
         renderResults(currentResults);
+        const targetVal = document.getElementById('redemption-target').value;
+        const isRefund = currentResults.length > 0 && currentResults[0].twdBase < 0;
+        const advice = getTacticalCardAdvice(currentResults, targetVal, isRefund);
+        renderTacticalAdvice(advice);
+    }
+    function getTacticalCardAdvice(results, target, isRefund) {
+        if (!results || results.length === 0 || isRefund || results[0].miles <= 0) {
+            return null;
+        }
+
+        const primary = results[0];
+        const advice = {
+            primaryCard: primary.name,
+            primaryReason: primary.isWarning ? "雖達上限，但綜合評估仍為當下最高" : "回饋率最高，且額度健康",
+            secondaryCard: null,
+            secondaryReason: null,
+            warning: primary.isWarning ? "注意：此筆消費將超出該卡回饋上限" : null,
+            targetHint: null
+        };
+
+        for (let i = 1; i < results.length; i++) {
+            const card = results[i];
+            if (!card.isWarning && card.miles > 0 && card.name !== primary.name) {
+                advice.secondaryCard = card.name;
+                advice.secondaryReason = "若需分刷，此為額度健康的最佳備案";
+                break;
+            }
+        }
+
+        if (primary.id && typeof primary.id === 'string' && !primary.id.startsWith('custom_')) {
+            const idLower = primary.id.toLowerCase();
+            const isCxSystem = idLower.includes('taishin_cx');
+            const isCiSystem = idLower.includes('ctbc_ci');
+
+            if (target === 'CI' && isCxSystem) {
+                advice.targetHint = "⚠️ 最佳卡片偏向國泰體系，請留意是否支援轉點至華航";
+            } else if (target === 'AM_BR' && isCiSystem) {
+                advice.targetHint = "⚠️ 最佳卡片偏向華航體系，請留意是否支援轉點至亞萬/長榮";
+            }
+        }
+
+        return advice;
+    }
+
+    function renderTacticalAdvice(adviceObj) {
+        const container = document.getElementById('tactical-advice-container');
+        if (!container) return;
+
+        if (!adviceObj) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+            return;
+        }
+
+        let html = `
+            <div class="card-box tdc-mb-3 p-3 shadow-sm" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac; border-radius: 16px;">
+                <div class="tdc-flex tdc-align-center tdc-mb-2">
+                    <svg class="lucide me-1 text-success"><use href="#icon-sparkle"/></svg>
+                    <h6 class="fw-bold tdc-m-0 text-success">戰術主攻建議</h6>
+                </div>
+                <div class="fw-bold text-dark" style="font-size: 1.05rem;">🎯 首選：${escapeHTML(adviceObj.primaryCard)}</div>
+                <div class="small text-secondary tdc-mb-2">💡 ${escapeHTML(adviceObj.primaryReason)}</div>
+        `;
+
+        if (adviceObj.warning) {
+            html += `<div class="small bg-white p-2 rounded-3 border border-warning text-danger fw-bold tdc-mb-2">🚨 ${escapeHTML(adviceObj.warning)}</div>`;
+        }
+
+        if (adviceObj.targetHint) {
+            html += `<div class="small bg-white p-2 rounded-3 border border-danger text-danger fw-bold tdc-mb-2">${escapeHTML(adviceObj.targetHint)}</div>`;
+        }
+
+        if (adviceObj.secondaryCard) {
+            html += `
+                <div class="border-top pt-2 mt-2">
+                    <div class="fw-bold text-dark" style="font-size: 0.95rem;">🛡️ 備援：${escapeHTML(adviceObj.secondaryCard)}</div>
+                    <div class="small text-secondary">💡 ${escapeHTML(adviceObj.secondaryReason)}</div>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="border-top pt-2 mt-2">
+                    <div class="small text-secondary">💡 目前沒有更健康的備援卡可建議</div>
+                </div>
+            `;
+        }
+
+        html += `</div>`;
+        
+        container.innerHTML = html;
+        container.style.display = 'block';
     }
 
     function renderResults(list) {
@@ -1987,7 +2079,6 @@
         `;
         document.getElementById('planner-results-container').innerHTML = html;
     }
-
     // --- AI 前置處理 Helpers ---
     function buildTopupCandidates(db) {
         const candidates = [];
