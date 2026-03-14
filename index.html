@@ -269,7 +269,8 @@
             <div class="tdc-row tdc-mb-2">
                 <div class="tdc-col-5">
                     <div class="input-wrapper">
-                        <input type="text" id="fx-currency-code" class="form-control text-center fw-bold" placeholder="如: 日本/JPY" oninput="handleCurrencyInput(this.value)">
+                        <input type="text" id="fx-currency-code" class="form-control text-center fw-bold pe-5" placeholder="如: 日本/JPY" oninput="handleCurrencyInput(this.value)">
+                        <button class="btn-inline-clear" type="button" onclick="clearFxCurrencyCode()">⊗</button>
                     </div>
                 </div>
                 <div class="tdc-col-7">
@@ -290,6 +291,7 @@
             <div id="fx-feedback" class="small fw-bold mt-2" style="color: #ef4444; display: none;">
                 💡 實質匯率 (含1.5%)：<span id="fx-real-rate">0</span>
                 <span id="fx-manual-warning" class="text-warning ms-2" style="display:none;">(✏️ 已手動覆寫匯率)</span>
+                <div id="fx-api-time" class="text-muted mt-1 fw-normal" style="font-size: 0.75rem; display: none;"></div>
             </div>
         </div>
 
@@ -320,6 +322,7 @@
       <div id="result-area" style="display: none;">
         <div id="tactical-advice-container" style="display: none;"></div>
         <div id="cards-container"></div>
+        <div id="airline-links-container" class="link-row mt-3 tdc-mb-3" style="display: none;"></div>
       </div>
     </div>
     <div id="page-list" class="page-section" style="display:none;">
@@ -458,8 +461,10 @@
   </div>
 
   <footer class="footer-disclaimer">
-    使用者應自行留意本工具更新日期可能並非最新公告後的兌換、累積比例，儘管我們製作此網站及作出假設時已力求審慎，惟活動過程中演算結果應只視作指標，而非絕對準確計算。詳情請參考銀行所提供之活動說明。<br><br>
-    亞商卓盛華閣股份有限公司（包括但不限於母集團及旗下關聯子公司、分公司）、社團法人臺灣哩程研究社、「環哩匯・尊貴常旅客俱樂部」、「社團法人環球常旅客協會」均無須對任何人就由於使用或依賴源自此活動網站的資料而引致或與此有關的任何損失、損害或任何形式的費用（包括但不限於任何經濟損失或其他直接、間接或相應而生的損害）承擔責任。
+    【使用聲明與免責條款】<br>
+    本程式主要提供環哩匯社員使用，內建邏輯、規則與後續維護方向，皆以社團特案推薦卡別為主。系統推薦路線以內建卡別主要可兌換之航司路線為主。<br><br>
+    使用者自行新增之卡別，目前僅提供基礎國內／海外回饋設定，未涵蓋指定通路、排除項目、活動門檻、回饋上限、聯名加碼、分期限制、哩程計畫資格或其他特殊條件。此外，使用者自由新增之航司為系統難以完整判別之目標，錯誤率較高。<br><br>
+    若因自行新增卡別或航司而產生計算誤差、判定落差或實際回饋與開票規則不符，請自行查核官方公告與權益說明，本程式不負相關責任。儘管我們製作此網站及作出假設時已力求審慎，惟活動過程中演算結果應只視作指標，而非絕對準確計算。亞商卓盛華閣股份有限公司（包括但不限於母集團及旗下關聯子公司、分公司）、社團法人臺灣哩程研究社、「環哩匯・尊貴常旅客俱樂部」、「社團法人環球常旅客協會」均無須對任何人就由於使用或依賴源自此活動網站的資料而引致或與此有關的任何損失、損害或任何形式的費用（包括但不限於任何經濟損失或其他直接、間接或相應而生的損害）承擔責任。
   </footer>
   <div class="modal fade" id="customConfirmModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -583,6 +588,9 @@
           </div>
           <div class="mb-4">
             <div class="fw-bold tdc-mb-2 text-primary">自訂卡片 (含客製化防護)</div>
+            <div class="alert alert-warning px-3 py-2 small fw-bold tdc-mb-3" style="background-color: #fffbeb; border: 1px solid #fde68a; color: #b45309; border-radius: 12px; line-height: 1.5;">
+              ⚠️ 系統提醒：自訂卡片僅提供基礎回饋計算，未涵蓋活動門檻、排除項目、回饋上限等複雜條件；若有誤差請自行核對官方公告，本程式不負相關責任。
+            </div>
             <div id="custom-cards-list"></div>
             <button class="btn btn-light tdc-w-100 mt-2 font-hand" onclick="addCustomCard()">+ 新增自訂卡片</button>
           </div>
@@ -614,6 +622,7 @@
       </div>
     </div>
   </div>
+  
   <div class="modal fade" id="guideModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-scrollable">
       <div class="modal-content border-0">
@@ -623,20 +632,68 @@
         </div>
         <div class="modal-body p-3 pt-0">
           <div class="p-3 tdc-mb-3" style="background-color: #f0f4f3; border-left: 5px solid #84a59d; border-radius: 12px;">
-              <div class="tdc-flex tdc-align-center tdc-mb-2"><span class="badge rounded-pill me-2" style="background:#84a59d; font-size:1rem;">1</span><h6 class="fw-bold tdc-m-0" style="color:#2f4f4f;">計算與記帳基礎</h6></div>
-              <p class="small text-muted tdc-m-0" style="line-height:1.6;">在首頁輸入消費金額與類別，系統將自動套用最新規章算出最優惠信用卡。點擊「開始計算」後，選擇最佳卡片按下「記帳」按鈕即可存入明細。若為外幣消費，請先選擇「🌎 外幣」並輸入牌告匯率，系統將自動為您試算折合台幣本金與 1.5% 手續費；如需退刷或修正上限額度，請點擊輸入框下方的「退刷/修正」按鈕。</p>
+            <div class="tdc-flex tdc-align-center tdc-mb-2">
+              <span class="badge rounded-pill me-2" style="background:#84a59d; font-size:1rem;">1</span>
+              <h6 class="fw-bold tdc-m-0" style="color:#2f4f4f;">首頁計算怎麼用</h6>
+            </div>
+            <ul class="small text-muted ps-3 mb-0" style="line-height:1.8;">
+              <li>先輸入消費金額、支付方式與類別，再按「開始計算」。</li>
+              <li>系統會依目前內建規則，列出最適合的卡片與預估哩程/積分。</li>
+              <li>若要把結果存起來，請按卡片下方的「記帳」。</li>
+              <li>若是退刷或負向修正，可使用金額欄下方的「退刷 / 修正上限額度」。</li>
+            </ul>
           </div>
+
           <div class="p-3 tdc-mb-3" style="background-color: #fcf4f3; border-left: 5px solid #e5989b; border-radius: 12px;">
-              <div class="tdc-flex tdc-align-center tdc-mb-2"><span class="badge rounded-pill me-2" style="background:#e5989b; font-size:1rem;">2</span><h6 class="fw-bold tdc-m-0" style="color:#8a4f4f;">神卡上限預警與手裁修正</h6></div>
-              <p class="small text-muted tdc-m-0" style="line-height:1.6;">本工具內建匯豐 Live+ 加碼上限與台新國泰百萬防溢位機制（支援自訂上限金額），當您的消費超出卡片剩餘額度時，系統會顯示紅框並強制降級回饋率。若系統計算結果因匯率差或四捨五入產生微小落差，您可以點擊結果卡片上的「✏️ 修正」按鈕，直接輸入您帳單上實際獲得的點數進行強制記帳，以保證帳目 100% 精準。</p>
+            <div class="tdc-flex tdc-align-center tdc-mb-2">
+              <span class="badge rounded-pill me-2" style="background:#e5989b; font-size:1rem;">2</span>
+              <h6 class="fw-bold tdc-m-0" style="color:#8a4f4f;">外幣模式與匯率</h6>
+            </div>
+            <ul class="small text-muted ps-3 mb-0" style="line-height:1.8;">
+              <li>切換為「🌎 外幣」後，可直接輸入國家名稱或幣別代碼，例如：日本 / JPY、英國 / GBP。</li>
+              <li>點擊「自動帶入匯率」後，系統會抓取匯率並顯示 API 提供的資料更新時間。</li>
+              <li>下方會同步顯示本金折台幣、1.5% 手續費與預估總扣款金額。</li>
+              <li>若手動改過匯率，系統會顯示「已手動覆寫匯率」提示。</li>
+            </ul>
           </div>
+
           <div class="p-3 tdc-mb-3" style="background-color: #f0f4f8; border-left: 5px solid #95b8d1; border-radius: 12px;">
-              <div class="tdc-flex tdc-align-center tdc-mb-2"><span class="badge rounded-pill me-2" style="background:#95b8d1; font-size:1rem;">3</span><h6 class="fw-bold tdc-m-0" style="color:#4a6fa5;">監控結算與一鍵進倉</h6></div>
-              <p class="small text-muted tdc-m-0" style="line-height:1.6;">每到信用卡結帳日後，請至下方的「監控」分頁。您可以在這裡一覽本期各卡別的累積總額，確認無誤後點擊「一鍵進倉」，系統會自動將本月累積的所有明細，轉化為「航空哩程」或「通用積分」並收納至倉庫。若需手動調整某張卡的已刷卡額度，也可點擊進度條旁的「✏️ 編輯」直接覆寫。</p>
+            <div class="tdc-flex tdc-align-center tdc-mb-2">
+              <span class="badge rounded-pill me-2" style="background:#95b8d1; font-size:1rem;">3</span>
+              <h6 class="fw-bold tdc-m-0" style="color:#4a6fa5;">監控、明細與一鍵進倉</h6>
+            </div>
+            <ul class="small text-muted ps-3 mb-0" style="line-height:1.8;">
+              <li>「明細」會保存尚未結算的本期紀錄。</li>
+              <li>「監控」可查看各卡本期累積與上限使用情況，必要時可手動編輯已消耗額度。</li>
+              <li>按下「一鍵進倉」後，系統會把本期成果轉入倉庫。</li>
+              <li>匯豐旅人積分與匯豐 Live+ 積分在系統內為分開資產池，會各自顯示對應夥伴與比例。</li>
+            </ul>
           </div>
+
           <div class="p-3 tdc-mb-3" style="background-color: #f5f3ff; border-left: 5px solid #a855f7; border-radius: 12px;">
-              <div class="tdc-flex tdc-align-center tdc-mb-2"><span class="badge rounded-pill me-2" style="background:#a855f7; font-size:1rem;">4</span><h6 class="fw-bold tdc-m-0" style="color:#5b21b6;">雙引擎 AI 戰略與倉庫資產</h6></div>
-              <p class="small text-muted tdc-m-0" style="line-height:1.6;">前往頂部齒輪「設定」貼上 Google Gemini API Key，即可在「倉庫 > 兌換試算」頁面解鎖 AI 雙引擎！勾選您要動用的資產，您可以點擊「戰略紫」進行全域盲測，或點擊「精準藍」獲取包含開口、轉機與後續刷卡建議的神仙提案！</p>
+            <div class="tdc-flex tdc-align-center tdc-mb-2">
+              <span class="badge rounded-pill me-2" style="background:#a855f7; font-size:1rem;">4</span>
+              <h6 class="fw-bold tdc-m-0" style="color:#5b21b6;">倉庫與 AI 戰略模式</h6>
+            </div>
+            <ul class="small text-muted ps-3 mb-0" style="line-height:1.8;">
+              <li>倉庫分為「資產管理」與「兌換試算」兩部分。</li>
+              <li>貼上 Gemini API Key 後，可使用「全局資產巔峰推薦」與「指定航線達成方案」。</li>
+              <li>AI 推薦會優先根據內建卡別可兌換之航司與既有資產進行分析。</li>
+              <li>結果下方提供長榮、華航、國泰、ANA 與 ANA 換星盟連結，方便立即查詢。</li>
+            </ul>
+          </div>
+
+          <div class="p-3 tdc-mb-2" style="background-color: #fff7ed; border-left: 5px solid #f59e0b; border-radius: 12px;">
+            <div class="tdc-flex tdc-align-center tdc-mb-2">
+              <span class="badge rounded-pill me-2" style="background:#f59e0b; font-size:1rem;">5</span>
+              <h6 class="fw-bold tdc-m-0" style="color:#9a3412;">重要風險提醒</h6>
+            </div>
+            <ul class="small text-muted ps-3 mb-0" style="line-height:1.8;">
+              <li>本程式以環哩匯社員常用之內建卡別與航司規則為主。</li>
+              <li>自訂卡片僅提供基礎國內 / 海外回饋設定，不含通路門檻、排除項目、活動加碼、回饋上限等複雜條件。</li>
+              <li>使用者自由新增之航司，系統辨識力有限，AI 推估錯誤率較高。</li>
+              <li>所有回饋、轉點、兌換與開票結果，仍請以銀行與航空公司官方公告為準。</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -653,7 +710,7 @@
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://gist.githubusercontent.com/r200552000/b13dba96ccd29a551c868da26230300f/raw/ai_strategy_rules.js"></script>
+  <script src="https://gist.githubusercontent.com/r200552000/1dbfcb17d4816cfbe8e8e5be48c699ab/raw/c0c5f84eb58e7ae673f0485738eccaf7d2d8d558/ai_strategy_rules.js"></script>
 
   <script>
     /* ==========================================
@@ -982,8 +1039,7 @@
         return String(str)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
+            .replace(/>/g, '&quot;')
             .replace(/'/g, '&#039;');
     }
     
@@ -1030,6 +1086,29 @@
     let lastFetchedRate = null;
 
     // --- 匯率國家辨識 Helper ---
+    function clearFxCurrencyCode() {
+        clearInput('fx-currency-code');
+        const hintEl = document.getElementById('fx-currency-hint');
+        if (hintEl) {
+            hintEl.style.display = 'none';
+            hintEl.innerText = '';
+        }
+
+        const timeEl = document.getElementById('fx-api-time');
+        if (timeEl) {
+            timeEl.style.display = 'none';
+            timeEl.innerText = '';
+        }
+
+        lastFetchedRate = null;
+        localStorage.removeItem('LAST_FX_CODE');
+
+        const currType = document.getElementById('currency-type').value;
+        if (currType === 'FOREIGN') {
+            document.getElementById('amount-label').innerHTML = '🌎 消費金額 (外幣)';
+        }
+    }
+
     function detectCurrencyCode(input) {
         if (!input || typeof input !== 'string') return null;
         const str = input.trim().toLowerCase();
@@ -1145,6 +1224,28 @@
                 lastFetchedRate = parseFloat(rate.toFixed(4));
                 updateFxFeedback(false);
 
+                const timeEl = document.getElementById('fx-api-time');
+                if (timeEl) {
+                    if (data.time_last_update_unix) {
+                        const d = new Date(data.time_last_update_unix * 1000);
+                        const formatted = d.toLocaleString('zh-TW', {
+                            timeZone: 'Asia/Taipei',
+                            hour12: false,
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        }).replace(/-/g, '/');
+                        timeEl.innerText = `🕒 資料來源時間 (API 提供): ${formatted}`;
+                        timeEl.style.display = 'block';
+                    } else {
+                        timeEl.innerText = '';
+                        timeEl.style.display = 'none';
+                    }
+                }
+
                 rateInput.style.transition = '0.3s';
                 rateInput.style.backgroundColor = '#dcfce7';
                 setTimeout(() => rateInput.style.backgroundColor = '#fff', 800);
@@ -1153,13 +1254,17 @@
             }
         } catch (err) {
             console.warn(err);
+            const timeEl = document.getElementById('fx-api-time');
+            if (timeEl) {
+                timeEl.innerText = '';
+                timeEl.style.display = 'none';
+            }
             showCustomAlert(`抓取失敗 (${codeInput})，請檢查代碼或直接手動輸入牌告匯率。`);
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
     }
-
     function updateKeywordPlaceholder() {
         const cat = document.getElementById('category').value;
         const input = document.getElementById('keyword-input');
@@ -1572,7 +1677,8 @@
         }
 
         const kwKey = (document.getElementById('keyword-input').value || '').trim().toLowerCase();
-        const currencyCode = (document.getElementById('fx-currency-code') ? document.getElementById('fx-currency-code').value.trim().toUpperCase() : '');
+        const rawFxCode = document.getElementById('fx-currency-code') ? document.getElementById('fx-currency-code').value.trim() : '';
+        const currencyCode = detectCurrencyCode(rawFxCode) || rawFxCode.toUpperCase();
         const isForeign = (currType === 'FOREIGN');
         const payMethod = document.getElementById('payment').value;
 
@@ -1756,16 +1862,17 @@
             con.appendChild(div);
         });
 
-        const linkDiv = document.createElement('div');
-        linkDiv.className = 'link-row mt-3 tdc-mb-3';
-        linkDiv.innerHTML = `
-            <a href="https://www.evaair.com/" target="_blank" class="btn-airline-link">長榮</a>
-            <a href="https://www.china-airlines.com/" target="_blank" class="btn-airline-link">華航</a>
-            <a href="https://www.cathaypacific.com/" target="_blank" class="btn-airline-link">國泰</a>
-            <a href="https://www.ana.co.jp/" target="_blank" class="btn-airline-link">ANA</a>
-            <a href="https://www.ana.co.jp/zh-tw/amc/reference/tux/staralliance/" target="_blank" class="btn-airline-link">ANA 換星盟</a>
-        `;
-        con.appendChild(linkDiv);
+        const linksContainer = document.getElementById('airline-links-container');
+        if (linksContainer) {
+            linksContainer.innerHTML = `
+                <a href="https://www.evaair.com/" target="_blank" class="btn-airline-link">長榮</a>
+                <a href="https://www.china-airlines.com/" target="_blank" class="btn-airline-link">華航</a>
+                <a href="https://www.cathaypacific.com/" target="_blank" class="btn-airline-link">國泰</a>
+                <a href="https://www.ana.co.jp/" target="_blank" class="btn-airline-link">ANA</a>
+                <a href="https://www.ana.co.jp/zh-tw/amc/reference/tux/staralliance/" target="_blank" class="btn-airline-link">ANA 換星盟</a>
+            `;
+            linksContainer.style.display = (list && list.length > 0) ? 'flex' : 'none';
+        }
     }
 
     function recordTx(idx, isManual = false, originalMiles = 0) {
@@ -2244,7 +2351,7 @@
             if (CARD_RULES[id] && CARD_RULES[id].ai_meta) {
                 const meta = CARD_RULES[id].ai_meta;
                 if (meta.bestRate > 0 && meta.baseRate > 0) {
-                    candidates.push({ cardName: CARD_RULES[id].name, ...meta });
+                    candidates.push({ id: id, cardName: CARD_RULES[id].name, ...meta });
                 }
             }
         });
@@ -2264,7 +2371,14 @@
             if (dom === fgn) bestScenario = "國內/海外皆可";
             else bestScenario = dom < fgn ? "國內消費" : "海外消費";
             
-            candidates.push({ cardName: name, bestRate, bestScenario, baseRate, isUnlimitedLike: (!c.limitAmt || c.limitAmt === 0) });
+            candidates.push({
+                id: c.id || '',
+                cardName: name,
+                bestRate: bestRate,
+                bestScenario: bestScenario,
+                baseRate: baseRate,
+                isUnlimitedLike: (!c.limitAmt || c.limitAmt === 0)
+            });
         });
         return candidates;
     }
@@ -2516,11 +2630,24 @@
 
                 topupCandidates = baseTopupCandidates.filter(c => {
                     const cardName = c.cardName || '';
+                    const cardId = c.id || '';
 
                     // 1. 判定該卡是否屬於通用積分池
+                    // 規則：只信任內建卡 id，自訂卡不得靠名稱冒充匯豐積分池
                     let poolName = null;
-                    if (cardName.includes('Live+')) poolName = '匯豐Live+積分';
-                    else if (cardName.includes('旅人')) poolName = '匯豐 旅人積分';
+
+                    if (cardId === 'hsbc_live') {
+                        poolName = '匯豐Live+積分';
+                    } else if (cardId === 'hsbc_inf') {
+                        poolName = '匯豐 旅人積分';
+                    } else if (!cardId) {
+                        // 僅作為最後備援，且必須高度精準
+                        if (cardName === '匯豐 Live+') {
+                            poolName = '匯豐Live+積分';
+                        } else if (cardName === '匯豐 旅人無限') {
+                            poolName = '匯豐 旅人積分';
+                        }
+                    }
 
                     // 2. 若為專屬聯名卡，直接透過名稱判斷生態系
                     if (!poolName) {
@@ -2661,7 +2788,32 @@ ${mode === 'global' ? globalSchema : specificSchema}`;
             }
 
             // 7. UI 渲染
-            const fixedDisclaimer = `<div class="mt-4 pt-3 border-top tdc-text-center"><small class="text-muted d-block" style="line-height: 1.5;">【系統聲明】您的卡片費率與現有哩程餘額為系統已知事實。<br>預估消耗、稅費及機位狀態為 AI 策略推估，請以實際開票當下之官方航司系統為準。<br><span class="text-primary-dark fw-bold">${formatMD(res.contextual_note)}</span></small></div>`;
+            const normalizeAirlineAlias = (name) => {
+                if (!name || typeof name !== 'string') return 'UNKNOWN';
+                const n = name.trim().toUpperCase();
+
+                if (n.includes('華航') || n.includes('中華航空') || n === 'CI') return 'CI';
+                if (n.includes('長榮') || n.includes('長榮航空') || n.includes('EVA') || n === 'BR') return 'BR';
+                if (n.includes('國泰') || n.includes('亞洲萬里通') || n.includes('亞萬') || n.includes('CATHAY') || n === 'CX' || n === 'AM') return 'CX';
+                if (n.includes('新航') || n.includes('新加坡航空') || n.includes('SINGAPORE AIRLINES') || n === 'SQ') return 'SQ';
+                if (n.includes('日航') || n.includes('日本航空') || n === 'JAL' || n === 'JL') return 'JL';
+                if (n.includes('全日空') || n.includes('ANA') || n === 'NH') return 'NH';
+                if (n.includes('聯合航空') || n.includes('UNITED') || n === 'UA') return 'UA';
+                return 'UNKNOWN';
+            };
+
+            const hasCustomAirline = db.warehouse.some(a =>
+                a &&
+                a.type === 'airline' &&
+                normalizeAirlineAlias(a.targetAirline) === 'UNKNOWN'
+            );
+
+            let extraWarningHtml = '';
+            if (hasCustomAirline) {
+                extraWarningHtml = `<div class="p-3 mb-3 bg-warning bg-opacity-10 border border-warning rounded-3 small text-dark" style="line-height: 1.5; text-align: justify;">⚠️ <b class="text-danger">系統高風險提示：</b><br>偵測到您的資產庫包含自由新增且非系統已知之航司。系統推薦路線以內建卡別主要可兌換之航司為主；針對自建航司，系統辨識力有限，AI 推估錯誤率顯著較高。<br>請自行查核該航司官方開票、兌換與可補血規則，本程式不負相關責任。</div>`;
+            }
+
+            const fixedDisclaimer = `${extraWarningHtml}<div class="mt-4 pt-3 border-top tdc-text-center"><small class="text-muted d-block" style="line-height: 1.6; text-align: justify;">【系統聲明】您的卡片費率與現有哩程餘額為系統已知事實；預估消耗、稅費、可行性與機位狀態為 AI 策略推估，實際仍以官方航司開票與兌換規則為準。<br><br>本系統推薦路線以內建卡別主要可兌換之航司路線為主；使用者自由新增之航司為系統難以完整判別之對象，錯誤率較高。若因自行新增航司或卡別而產生計算、判定或推薦落差，本程式不負相關責任。<br><br><span class="text-primary-dark fw-bold">${formatMD(res.contextual_note)}</span></small></div>`;
 
             if (mode === 'global') {
                 const asr = res.asset_strategy_review || {};
